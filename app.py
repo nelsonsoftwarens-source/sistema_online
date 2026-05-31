@@ -120,10 +120,61 @@ def logout():
 def verificar_login():
     return "empresa_id" in session
 
+# ======================================================
+# PRODUTOS
+# ======================================================
 @app.route("/api/produtos")
 def api_produtos():
+
+    token = request.args.get("token")
+
+    print("TOKEN RECEBIDO:", repr(token))
     print("🔥 API PRODUTOS EXECUTOU")
-    return jsonify([])
+
+    conn = conectar()
+    cur = conn.cursor()
+
+    # validar login
+    cur.execute("""
+        SELECT empresa_id
+        FROM logins_empresa
+        WHERE token = %s
+    """, (token,))
+
+    row = cur.fetchone()
+
+    print("LOGIN ENCONTRADO:", row)
+
+    if not row:
+        return jsonify({"erro": "TOKEN INVALIDO"}), 401
+
+    empresa_id = row[0]
+
+    # buscar produtos dessa empresa
+    cur.execute("""
+        SELECT descricao, preco_venda, preco_compra, categoria, barcode, ativo
+        FROM produtos
+        WHERE empresa_id = %s
+    """, (empresa_id,))
+    produtos = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    # converter para JSON
+    resultado = [
+        {
+            "descricao": p[0],
+            "preco_venda": p[1],
+            "preco_compra": p[2],
+            "categoria": p[3],
+            "barcode": p[4],
+            "ativo": p[5]
+        }
+        for p in produtos
+    ]
+
+    return jsonify(resultado)
 
 @app.route("/produtos")
 def produtos():
@@ -1514,19 +1565,23 @@ def tickets():
 
 
 from flask import session, request, redirect
-
 @app.before_request
 def proteger_rotas():
 
-    # 🔥 NUNCA tocar em API
-    if request.path.startswith("/api/"):
+    rotas_livres = [
+        "login",
+        "static",
+        "api_produtos",
+        "api_salvar_produto",
+        "api_tickets",
+        "api_vendas",
+        "api_salvar_venda",
+    ]
+
+    # deixar APIs funcionarem sem login (usam token)
+    if request.endpoint in rotas_livres:
         return
 
-    # rotas livres
-    if request.endpoint in ("login", "static"):
-        return
-
-    # proteção normal
     if "login_id" not in session:
         return redirect("/login")
 # ======================================================
