@@ -1,0 +1,129 @@
+{% extends 'base.html' %}
+
+{% block conteudo %}
+
+<div class="topo-pagina">
+    <h2>🎫 Tickets</h2>
+</div>
+
+<!-- ====================================== -->
+<!-- BUSCA -->
+<!-- ====================================== -->
+
+<div class="painel">
+
+    <input type="text"
+           id="buscaTicket"
+           class="campo-busca-inline"
+           placeholder="🔎 Buscar ticket, mesa ou cliente...">
+
+</div>
+
+<!-- ====================================== -->
+<!-- TABELA -->
+<!-- ====================================== -->
+
+<div class="painel">
+
+    <table id="tabelaTickets">
+
+        <thead>
+
+            <tr>
+
+                <th>Ticket</th>
+                <th>Mesa</th>
+                <th>Cliente</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th>Pagamento</th>
+                <th>Tipo</th>
+                <th>Impressões</th>
+                <th>Usuário</th>
+                <th>Data</th>
+
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+            {% for t in tickets %}
+
+            <tr>
+
+                <td>#{{ t[1] }}</td>
+
+                <td>{{ t[2] }}</td>
+
+                <td>{{ t[3] }}</td>
+
+                <td>
+                    <strong>
+                        {{ t[4] }} MT
+                    </strong>
+                </td>
+
+                <td>
+
+                    {% if t[5] %}
+                        <span style="color:green;font-weight:bold;">
+                            ✅ PAGO
+                        </span>
+                    {% else %}
+                        <span style="color:red;font-weight:bold;">
+                            ❌ PENDENTE
+                        </span>
+                    {% endif %}
+
+                </td>
+
+                <td>{{ t[9] }}</td>
+
+                <td>{{ t[11] }}</td>
+
+                <td>{{ t[10] }}</td>
+
+                <td>{{ t[7] }}</td>
+
+                <td>{{ t[6] }}</td>
+
+            </tr>
+
+            {% endfor %}
+
+        </tbody>
+
+    </table>
+
+</div>
+
+<!-- ====================================== -->
+<!-- FILTRO DINÂMICO -->
+<!-- ====================================== -->
+
+<script>
+
+document.getElementById("buscaTicket").addEventListener("keyup", function(){
+
+    let texto = this.value.toLowerCase();
+
+    let linhas = document.querySelectorAll("#tabelaTickets tbody tr");
+
+    linhas.forEach(function(linha){
+
+        let conteudo = linha.innerText.toLowerCase();
+
+        if(conteudo.includes(texto)){
+            linha.style.display = "";
+        }else{
+            linha.style.display = "none";
+        }
+
+    });
+
+});
+
+</script>
+
+{% endblock %}

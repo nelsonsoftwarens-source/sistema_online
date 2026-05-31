@@ -1,0 +1,104 @@
+{% extends 'base.html' %}
+
+{% block conteudo %}
+
+<div class="topo-pagina">
+    <h2>📊 Relatórios Financeiros</h2>
+</div>
+
+<!-- ====================================== -->
+<!-- CARDS -->
+<!-- ====================================== -->
+
+<div class="cards">
+
+    <div class="card">
+        <h3>💰 Entradas</h3>
+        <span>{{ total_entrada }} MT</span>
+    </div>
+
+    <div class="card">
+        <h3>💸 Saídas</h3>
+        <span>{{ total_saida }} MT</span>
+    </div>
+
+</div>
+
+<!-- ====================================== -->
+<!-- FILTROS -->
+<!-- ====================================== -->
+
+<div class="painel">
+
+    <form method="GET" class="form-produto">
+
+        <input type="date"
+               name="data_inicio">
+
+        <input type="date"
+               name="data_fim">
+
+        <button class="btn-guardar">
+            🔎 Filtrar
+        </button>
+
+    </form>
+
+</div>
+
+<!-- ====================================== -->
+<!-- TABELA -->
+<!-- ====================================== -->
+
+<div class="painel">
+
+    <table>
+
+        <thead>
+
+            <tr>
+                <th>ID</th>
+                <th>Tipo</th>
+                <th>Descrição</th>
+                <th>Entrada</th>
+                <th>Saída</th>
+                <th>Usuário</th>
+                <th>Data</th>
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+            {% for m in movimentos %}
+
+            <tr>
+
+                <td>{{ m[0] }}</td>
+                <td>{{ m[1] }}</td>
+                <td>{{ m[2] }}</td>
+
+                <td>
+                    {{ m[3] }} MT
+                </td>
+
+                <td>
+                    {{ m[4] }} MT
+                </td>
+
+                <td>{{ m[5] }}</td>
+
+                <td>{{ m[6] }}</td>
+
+            </tr>
+
+            {% endfor %}
+
+        </tbody>
+
+    </table>
+
+</div>
+
+{% endblock %}
+

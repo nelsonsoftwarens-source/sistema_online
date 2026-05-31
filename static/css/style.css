@@ -1,0 +1,465 @@
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Poppins,sans-serif;
+}
+
+body{
+    background:#f4f6f9;
+}
+
+/* =========================
+   LAYOUT PRINCIPAL
+========================= */
+
+.layout{
+    display:flex;
+    min-height:100vh;
+}
+
+/* =========================
+   SIDEBAR AZUL
+========================= */
+
+.sidebar{
+    width:260px;
+    background:linear-gradient(180deg,#1e40af,#1d4ed8);
+    color:white;
+    padding:25px;
+}
+
+.logo h1{
+    font-size:26px;
+}
+
+.logo span{
+    font-size:12px;
+    opacity:0.7;
+}
+
+.menu-item{
+    display:block;
+    padding:14px;
+    margin-top:10px;
+    border-radius:10px;
+    color:white;
+    text-decoration:none;
+    background:rgba(255,255,255,0.1);
+    transition:0.2s;
+}
+
+.menu-item:hover{
+    background:rgba(255,255,255,0.2);
+    transform:translateX(3px);
+}
+
+/* =========================
+   MAIN
+========================= */
+
+.main{
+    flex:1;
+}
+
+.topbar{
+    background:white;
+    padding:20px;
+    box-shadow:0 2px 10px rgba(0,0,0,0.05);
+}
+
+.content{
+    padding:25px;
+}
+
+/* =========================
+   DASHBOARD CARDS
+========================= */
+
+.cards{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+    gap:20px;
+}
+
+.card{
+    background:white;
+    padding:20px;
+    border-radius:16px;
+    box-shadow:0 3px 12px rgba(0,0,0,0.08);
+}
+
+.card span{
+    font-size:28px;
+    font-weight:bold;
+    color:#1d4ed8;
+}
+
+/* =========================
+   PAINEL
+========================= */
+
+.painel{
+    margin-top:20px;
+    background:white;
+    padding:25px;
+    border-radius:18px;
+    box-shadow:0 3px 10px rgba(0,0,0,0.06);
+}
+
+/* =========================
+   TOPO PAGINA
+========================= */
+
+.topo-pagina{
+    margin-bottom:20px;
+}
+
+.topo-pagina h2{
+    font-size:32px;
+    color:#1e293b;
+}
+
+/* =========================
+   FORM PRODUTO
+========================= */
+
+.form-produto{
+
+    display:grid;
+
+    grid-template-columns:
+        repeat(auto-fit,minmax(320px,1fr));
+
+    gap:20px;
+}
+
+.form-produto input{
+
+    width:100%;
+
+    height:72px;
+
+    padding:20px;
+
+    border:none;
+
+    border-radius:16px;
+
+    background:#f1f5f9;
+
+    font-size:20px;
+
+    transition:0.2s;
+}
+
+.form-produto input:focus{
+
+    outline:none;
+
+    background:white;
+
+    box-shadow:
+        0 0 0 4px rgba(37,99,235,0.2);
+}
+
+/* =========================
+   BOTÃO GUARDAR
+========================= */
+
+.btn-guardar{
+
+    height:72px;
+
+    border:none;
+
+    border-radius:16px;
+
+    background:#1d4ed8;
+
+    color:white;
+
+    font-size:20px;
+
+    font-weight:bold;
+
+    cursor:pointer;
+
+    transition:0.2s;
+}
+
+.btn-guardar:hover{
+
+    background:#2563eb;
+
+    transform:translateY(-2px);
+}
+
+/* =========================
+   BUSCA
+========================= */
+
+.campo-busca{
+
+    width:100%;
+
+    height:72px;
+
+    padding:20px;
+
+    border:none;
+
+    border-radius:16px;
+
+    background:#f1f5f9;
+
+    font-size:20px;
+}
+
+.campo-busca:focus{
+
+    outline:none;
+
+    background:white;
+
+    box-shadow:
+        0 0 0 4px rgba(37,99,235,0.2);
+}
+
+/* =========================
+   TABELAS
+========================= */
+
+table{
+    width:100%;
+    border-collapse:collapse;
+    margin-top:10px;
+}
+
+table thead{
+
+    background:#1d4ed8;
+    color:white;
+}
+
+th{
+
+    padding:18px;
+
+    font-size:17px;
+
+    text-align:left;
+}
+
+td{
+
+    padding:18px;
+
+    border-bottom:1px solid #e5e7eb;
+
+    font-size:16px;
+}
+
+table tr:hover{
+    background:#f8fafc;
+}
+
+/* =========================
+   BOTÕES AÇÕES
+========================= */
+
+.btn-acao{
+
+    display:inline-block;
+
+    padding:10px 15px;
+
+    border-radius:10px;
+
+    text-decoration:none;
+
+    color:white;
+
+    font-size:14px;
+
+    font-weight:bold;
+
+    margin-right:5px;
+
+    transition:0.2s;
+}
+
+.btn-editar{
+    background:#f59e0b;
+}
+
+.btn-editar:hover{
+    background:#d97706;
+}
+
+.btn-eliminar{
+    background:#dc2626;
+}
+
+.btn-eliminar:hover{
+    background:#b91c1c;
+}
+
+/* =========================
+   ALERTA SUCESSO
+========================= */
+
+.alerta-sucesso{
+
+    background:#dcfce7;
+
+    color:#166534;
+
+    padding:18px 22px;
+
+    border-radius:14px;
+
+    font-size:18px;
+
+    font-weight:bold;
+
+    margin-bottom:20px;
+
+    animation:fadein 0.3s ease;
+}
+
+@keyframes fadein{
+
+    from{
+        opacity:0;
+        transform:translateY(-10px);
+    }
+
+    to{
+        opacity:1;
+        transform:translateY(0);
+    }
+}
+
+/* =========================
+   POS / VENDAS LAYOUT
+========================= */
+
+.vendas-layout{
+    display:flex;
+    gap:20px;
+}
+
+/* CARRINHO */
+
+.carrinho{
+    width:40%;
+    background:white;
+    padding:15px;
+    border-radius:12px;
+    box-shadow:0 3px 10px rgba(0,0,0,0.08);
+}
+
+/* PRODUTOS */
+
+.produtos{
+    width:60%;
+}
+
+/* GRID PRODUTOS */
+
+.grid-produtos{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+    gap:12px;
+}
+
+/* CARD PRODUTO */
+
+.card-produto{
+    background:white;
+    padding:12px;
+    border-radius:12px;
+    box-shadow:0 3px 8px rgba(0,0,0,0.08);
+}
+
+.card-produto h3{
+    font-size:16px;
+}
+
+.card-produto span{
+    display:block;
+    margin-top:5px;
+    color:#1d4ed8;
+    font-weight:bold;
+}
+
+/* INPUT QUANTIDADE */
+
+.card-produto input{
+    width:100%;
+    padding:10px;
+    margin-top:8px;
+    border:1px solid #ddd;
+    border-radius:8px;
+}
+
+/* BOTÃO ADICIONAR */
+
+.card-produto button{
+    margin-top:10px;
+    width:100%;
+    padding:10px;
+    border:none;
+    border-radius:8px;
+    background:#1d4ed8;
+    color:white;
+    cursor:pointer;
+    transition:0.2s;
+}
+
+.card-produto button:hover{
+    background:#2563eb;
+}
+
+/* BOTÃO FINALIZAR */
+
+.btn-finalizar{
+    margin-top:10px;
+    width:100%;
+    padding:14px;
+    border:none;
+    border-radius:10px;
+    background:green;
+    color:white;
+    font-size:16px;
+    cursor:pointer;
+}
+
+.btn-finalizar:hover{
+    background:darkgreen;
+}
+.header-produtos{
+
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+
+    margin-bottom:15px;
+    gap:15px;
+}
+
+.campo-busca-inline{
+
+    width:420px;
+    height:45px;
+
+    padding:10px 15px;
+
+    border:none;
+    border-radius:10px;
+
+    background:#f1f5f9;
+
+    font-size:16px;
+}

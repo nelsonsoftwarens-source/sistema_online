@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pt">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <title>{{ empresa_nome }}</title>
+
+    <link rel="stylesheet"
+          href="{{ url_for('static', filename='css/style.css') }}">
+
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+          rel="stylesheet">
+
+</head>
+
+<body>
+
+<div class="layout">
+
+    <!-- ====================================== -->
+    <!-- SIDEBAR -->
+    <!-- ====================================== -->
+
+    <div class="sidebar">
+
+        <!-- LOGO -->
+        <div class="logo">
+
+            <h1>{{ empresa_nome }}</h1>
+
+            <span>
+                💵 {{ empresa_moeda }}
+            </span>
+
+        </div>
+        
+        <!-- FOOTER SIDEBAR -->
+        <div class="sidebar-footer">
+
+            <div class="usuario-logado">
+
+                👤 {{ session.get('empresa_nome') }}
+
+            </div>
+
+            <a href="/logout" class="btn-logout">
+                🚪 Terminar Sessão
+            </a>
+
+        </div>
+        <!-- MENU -->
+        <div class="menu">
+
+            <a href="/painel" class="menu-item">
+                📊 Painel
+            </a>
+
+            <a href="/produtos" class="menu-item">
+                📦 Produtos
+            </a>
+
+            <a href="/vendas" class="menu-item">
+                💰 Vendas
+            </a>
+
+            <a href="/tickets" class="menu-item">
+                🎫 Tickets
+            </a>
+
+            <a href="/relatorios" class="menu-item">
+                📈 Relatórios
+            </a>
+
+            <a href="/vendas_online" class="menu-item">
+                💰 Relatorio Vendas
+            </a>
+
+        </div>
+
+
+    </div>
+
+    <!-- ====================================== -->
+    <!-- MAIN -->
+    <!-- ====================================== -->
+
+    <div class="main">
+
+        <!-- TOPBAR -->
+        <div class="topbar">
+
+            <div>
+
+                <h2>
+                    Sistema de Gestão
+                </h2>
+
+                <span class="subtitulo">
+                    Painel Administrativo
+                </span>
+
+            </div>
+
+        </div>
+
+        <!-- CONTENT -->
+        <div class="content">
+
+            {% block conteudo %}
+            {% endblock %}
+
+        </div>
+
+    </div>
+
+</div>
+
+</body>
+
+</html>

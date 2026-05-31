@@ -1,0 +1,190 @@
+{% extends 'base.html' %}
+
+{% block conteudo %}
+
+<div class="vendas-layout">
+
+    <!-- CARRINHO -->
+    <div class="carrinho">
+
+        <h2>🧾 Carrinho</h2>
+
+        <table id="tabela-carrinho">
+
+            <thead>
+                <tr>
+                    <th>Produto</th>
+                    <th>Qtd</th>
+                    <th>Preço</th>
+                    <th>Total</th>
+                    <th>Ação</th>
+                </tr>
+            </thead>
+
+            <tbody></tbody>
+
+        </table>
+
+        <h1 id="total-geral">0.00 MT</h1>
+
+        <button class="btn-finalizar" onclick="finalizarVenda()">
+            💰 Finalizar Venda
+        </button>
+
+    </div>
+
+    <!-- PRODUTOS -->
+    <div class="produtos">
+
+        <!-- HEADER COM FILTRO -->
+        <div class="header-produtos">
+
+            <h2>📦 Produtos</h2>
+
+            <input type="text"
+                id="filtro-produtos"
+                class="campo-busca-inline"
+                placeholder="🔎 Filtrar produtos...">
+
+        </div>
+
+        <!-- GRID -->
+        <div class="grid-produtos">
+
+            {% for p in produtos %}
+
+            <div class="card-produto"
+                data-id="{{ p[0] }}"
+                data-nome="{{ p[1] }}"
+                data-preco="{{ p[2] }}">
+
+                <h3>{{ p[1] }}</h3>
+                <p>{{ p[3] }}</p>
+                <span>{{ p[2] }} MT</span>
+
+                <input type="number"
+                    min="1"
+                    value="1"
+                    id="qtd-{{ p[0] }}">
+
+                <button type="button" onclick="adicionarProduto(this)">
+                    ➕ Adicionar
+                </button>
+
+            </div>
+
+            {% endfor %}
+
+        </div>
+
+    </div>
+</div>
+
+<script>
+
+let itens = [];
+
+function adicionarProduto(el){
+
+    let card = el.closest(".card-produto");
+
+    let id = parseInt(card.dataset.id);
+    let nome = card.dataset.nome;
+    let preco = parseFloat(card.dataset.preco);
+
+    let qtd = parseInt(document.getElementById("qtd-" + id).value);
+
+    let item = itens.find(i => i.id === id);
+
+    if(item){
+        item.qtd += qtd;
+        item.total = item.qtd * item.preco;
+    }else{
+        itens.push({
+            id:id,
+            nome:nome,
+            preco:preco,
+            qtd:qtd,
+            total:preco * qtd
+        });
+    }
+
+    render();
+}
+
+function remover(id){
+    itens = itens.filter(i => i.id !== id);
+    render();
+}
+
+function render(){
+
+    let tbody = document.querySelector("#tabela-carrinho tbody");
+    tbody.innerHTML = "";
+
+    let total = 0;
+
+    itens.forEach(i => {
+
+        total += i.total;
+
+        tbody.innerHTML += `
+            <tr>
+                <td>${i.nome}</td>
+                <td>${i.qtd}</td>
+                <td>${i.preco.toFixed(2)}</td>
+                <td>${i.total.toFixed(2)}</td>
+                <td>
+                    <button onclick="remover(${i.id})">❌</button>
+                </td>
+            </tr>
+        `;
+    });
+
+    document.getElementById("total-geral").innerHTML =
+        total.toFixed(2) + " MT";
+}
+
+function finalizarVenda(){
+
+    fetch("/finalizar_venda",{
+        method:"POST",
+        headers:{
+            "Content-Type":"application/json"
+        },
+        body:JSON.stringify({
+            cliente:"Consumidor Final",
+            total:itens.reduce((a,b)=>a+b.total,0),
+            itens:itens
+        })
+    })
+    .then(r=>r.json())
+    .then(d=>{
+        alert("Venda finalizada!");
+        itens = [];
+        render();
+    });
+
+}
+document.getElementById("filtro-produtos").addEventListener("keyup", function () {
+
+    let texto = this.value.toLowerCase();
+
+    let cards = document.querySelectorAll(".card-produto");
+
+    cards.forEach(card => {
+
+        let nome = card.dataset.nome.toLowerCase();
+
+        if (nome.includes(texto)) {
+            card.style.display = "block";
+        } else {
+            card.style.display = "none";
+        }
+
+    });
+
+});
+</script>
+
+{% endblock %}

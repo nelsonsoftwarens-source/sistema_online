@@ -1,0 +1,29 @@
+{% extends 'base.html' %}
+
+{% block conteudo %}
+
+<div class="topo-pagina">
+    <h2>✏️ Editar Produto</h2>
+</div>
+
+<div class="painel">
+
+    <form method="POST" action="/atualizar_produto">
+
+        <input type="hidden" name="id" value="{{ produto[0] }}">
+
+        <input type="text" name="descricao" value="{{ produto[1] }}">
+        <input type="number" step="0.01" name="preco_venda" value="{{ produto[2] }}">
+        <input type="number" step="0.01" name="preco_compra" value="{{ produto[3] }}">
+        <input type="text" name="categoria" value="{{ produto[4] }}">
+        <input type="text" name="barcode" value="{{ produto[5] }}">
+
+        <button class="btn-guardar" type="submit">
+            💾 Atualizar
+        </button>
+
+    </form>
+
+</div>
+
+{% endblock %}

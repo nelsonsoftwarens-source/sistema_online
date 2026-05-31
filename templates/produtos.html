@@ -1,0 +1,417 @@
+
+{% extends 'base.html' %}
+
+{% block conteudo %}
+
+<style>
+
+/* ========================================= */
+/* TOPO */
+/* ========================================= */
+
+.topo-pagina{
+    margin-bottom:25px;
+}
+
+.topo-pagina h2{
+    font-size:32px;
+    font-weight:bold;
+    color:#1e293b;
+}
+
+/* ========================================= */
+/* PAINEL */
+/* ========================================= */
+
+.painel{
+
+    background:white;
+
+    padding:25px;
+
+    border-radius:18px;
+
+    margin-bottom:25px;
+
+    box-shadow:0 4px 12px rgba(0,0,0,0.08);
+}
+
+/* ========================================= */
+/* FORMULÁRIO */
+/* ========================================= */
+
+.form-produto{
+
+    display:grid;
+
+    grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
+
+    gap:20px;
+}
+
+.form-produto input{
+
+    width:100%;
+
+    height:70px;
+
+    border:none;
+
+    border-radius:16px;
+
+    padding:20px;
+
+    font-size:20px;
+
+    background:#f1f5f9;
+
+    transition:0.2s;
+}
+
+.form-produto input:focus{
+
+    outline:none;
+
+    background:white;
+
+    box-shadow:0 0 0 4px rgba(37,99,235,0.2);
+}
+
+/* ========================================= */
+/* BOTÃO */
+/* ========================================= */
+
+.btn-guardar{
+
+    height:70px;
+
+    border:none;
+
+    border-radius:16px;
+
+    background:#2563eb;
+
+    color:white;
+
+    font-size:20px;
+
+    font-weight:bold;
+
+    cursor:pointer;
+
+    transition:0.2s;
+}
+
+.btn-guardar:hover{
+
+    background:#1d4ed8;
+
+    transform:translateY(-2px);
+}
+
+/* ========================================= */
+/* BUSCA */
+/* ========================================= */
+
+.campo-busca{
+
+    width:100%;
+
+    height:70px;
+
+    border:none;
+
+    border-radius:16px;
+
+    padding:20px;
+
+    font-size:20px;
+
+    background:#f1f5f9;
+}
+
+/* ========================================= */
+/* TABELA */
+/* ========================================= */
+
+table{
+
+    width:100%;
+
+    border-collapse:collapse;
+}
+
+table thead{
+
+    background:#2563eb;
+
+    color:white;
+}
+
+table th{
+
+    padding:18px;
+
+    font-size:18px;
+}
+
+table td{
+
+    padding:18px;
+
+    font-size:17px;
+
+    border-bottom:1px solid #e2e8f0;
+}
+
+table tr:hover{
+
+    background:#f8fafc;
+}
+
+/* ========================================= */
+/* BOTÕES AÇÕES */
+/* ========================================= */
+
+.btn-acao{
+
+    padding:10px 15px;
+
+    border-radius:10px;
+
+    text-decoration:none;
+
+    color:white;
+
+    font-size:15px;
+
+    font-weight:bold;
+
+    margin-right:5px;
+
+    display:inline-block;
+}
+
+.btn-editar{
+    background:#f59e0b;
+}
+
+.btn-eliminar{
+    background:#dc2626;
+}
+
+/* ========================================= */
+/* ALERTA PERSONALIZADO */
+/* ========================================= */
+
+.alerta-sucesso{
+
+    background:#dcfce7;
+
+    color:#166534;
+
+    padding:20px;
+
+    border-radius:14px;
+
+    font-size:18px;
+
+    font-weight:bold;
+
+    margin-bottom:20px;
+
+    animation:fadein 0.3s ease;
+}
+
+@keyframes fadein{
+
+    from{
+        opacity:0;
+        transform:translateY(-10px);
+    }
+
+    to{
+        opacity:1;
+        transform:translateY(0);
+    }
+}
+
+</style>
+
+<div class="topo-pagina">
+    <h2>📦 Produtos</h2>
+</div>
+
+<!-- ====================================== -->
+<!-- ALERTA -->
+<!-- ====================================== -->
+
+{% with messages = get_flashed_messages(with_categories=true) %}
+
+    {% if messages %}
+
+        {% for categoria, mensagem in messages %}
+
+            <div class="alerta-sucesso">
+                ✅ {{ mensagem }}
+            </div>
+
+        {% endfor %}
+
+    {% endif %}
+
+{% endwith %}
+
+<!-- ====================================== -->
+<!-- FORM PRODUTO -->
+<!-- ====================================== -->
+
+<div class="painel">
+
+    <form method="POST"
+          action="/salvar_produto"
+          class="form-produto">
+
+        <input type="text"
+               name="descricao"
+               placeholder="Descrição do Produto"
+               required>
+
+        <input type="number"
+               step="0.01"
+               name="preco_venda"
+               placeholder="Preço Venda">
+
+        <input type="number"
+               step="0.01"
+               name="preco_compra"
+               placeholder="Preço Compra">
+
+        <input type="text"
+               name="categoria"
+               placeholder="Categoria">
+
+        <input type="text"
+               name="barcode"
+               placeholder="Código de Barras">
+
+        <button class="btn-guardar" type="submit">
+            💾 Guardar Produto
+        </button>
+
+    </form>
+
+</div>
+
+<!-- ====================================== -->
+<!-- BUSCA -->
+<!-- ====================================== -->
+
+<div class="painel">
+
+    <input type="text"
+           id="buscaProduto"
+           placeholder="🔎 Buscar produto..."
+           class="campo-busca">
+
+</div>
+
+<!-- ====================================== -->
+<!-- TABELA -->
+<!-- ====================================== -->
+
+<div class="painel">
+
+    <table id="tabelaProdutos">
+
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Descrição</th>
+                <th>Venda</th>
+                <th>Compra</th>
+                <th>Categoria</th>
+                <th>Barcode</th>
+                <th>Status</th>
+                <th>Ações</th>
+            </tr>
+        </thead>
+
+        <tbody>
+
+        {% for p in produtos %}
+
+            <tr>
+
+                <td>{{ p[0] }}</td>
+                <td>{{ p[1] }}</td>
+                <td>{{ p[2] }}</td>
+                <td>{{ p[3] }}</td>
+                <td>{{ p[4] }}</td>
+                <td>{{ p[5] }}</td>
+
+                <td>
+                    {% if p[6] %}
+                        ✅ Ativo
+                    {% else %}
+                        ❌ Inativo
+                    {% endif %}
+                </td>
+
+                <td>
+
+                    <a href="/editar_produto/{{ p[0] }}"
+                       class="btn-acao btn-editar">
+                        ✏️ Editar
+                    </a>
+
+                    <a href="/eliminar_produto/{{ p[0] }}"
+                       class="btn-acao btn-eliminar"
+                       onclick="return confirm('Deseja eliminar este produto?')">
+                        🗑️ Eliminar
+                    </a>
+
+                </td>
+
+            </tr>
+
+        {% endfor %}
+
+        </tbody>
+
+    </table>
+
+</div>
+
+<!-- ====================================== -->
+<!-- BUSCA DINÂMICA -->
+<!-- ====================================== -->
+
+<script>
+
+const busca = document.getElementById("buscaProduto");
+
+busca.addEventListener("keyup", function() {
+
+    let texto = busca.value.toLowerCase();
+
+    let linhas = document.querySelectorAll("#tabelaProdutos tbody tr");
+
+    linhas.forEach(function(linha) {
+
+        let conteudo = linha.innerText.toLowerCase();
+
+        if (conteudo.includes(texto)) {
+            linha.style.display = "";
+        } else {
+            linha.style.display = "none";
+        }
+
+    });
+
+});
+
+</script>
+
+{% endblock %}
+```

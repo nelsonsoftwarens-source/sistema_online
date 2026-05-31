@@ -1,0 +1,108 @@
+{% extends 'base.html' %}
+
+{% block conteudo %}
+
+<div class="topo-pagina">
+    <h2>📊 Painel Geral</h2>
+</div>
+
+<!-- ====================================== -->
+<!-- CARDS -->
+<!-- ====================================== -->
+
+<div class="cards">
+
+    <div class="card">
+        <h3>💰 Total Vendas</h3>
+        <span>{{ total_vendas }} MT</span>
+    </div>
+
+    <div class="card">
+        <h3>📦 Total Compras</h3>
+        <span>{{ total_compras }} MT</span>
+    </div>
+
+    <div class="card">
+        <h3>💸 Total Despesas</h3>
+        <span>{{ total_despesas }} MT</span>
+    </div>
+
+</div>
+
+<!-- ====================================== -->
+<!-- TABELA -->
+<!-- ====================================== -->
+
+<div class="painel">
+
+    <h3>🕒 Últimos Movimentos</h3>
+
+    <table>
+
+        <thead>
+
+            <tr>
+                <th>ID</th>
+                <th>Tipo</th>
+                <th>Referência</th>
+                <th>Valor</th>
+                <th>Status</th>
+                <th>Usuário</th>
+                <th>Data</th>
+            </tr>
+
+        </thead>
+
+        <tbody>
+
+            {% for m in movimentos %}
+
+            <tr>
+
+                <td>{{ m[0] }}</td>
+
+                <td>
+
+                    {% if m[1] == "VENDA" %}
+                        💰 VENDA
+                    {% elif m[1] == "COMPRA" %}
+                        📦 COMPRA
+                    {% elif m[1] == "DESPESA" %}
+                        💸 DESPESA
+                    {% else %}
+                        {{ m[1] }}
+                    {% endif %}
+
+                </td>
+
+                <td>{{ m[2] }}</td>
+
+                <td>
+                    {{ m[3] }} MT
+                </td>
+
+                <td>
+
+                    {% if m[4] == "PAGO" %}
+                        🟢 PAGO
+                    {% else %}
+                        🟠 {{ m[4] }}
+                    {% endif %}
+
+                </td>
+
+                <td>{{ m[5] }}</td>
+
+                <td>{{ m[6] }}</td>
+
+            </tr>
+
+            {% endfor %}
+
+        </tbody>
+
+    </table>
+
+</div>
+
+{% endblock %}
