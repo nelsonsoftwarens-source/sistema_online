@@ -130,6 +130,7 @@ def api_produtos():
     token = request.args.get("token")
 
     print("TOKEN RECEBIDO:", repr(token))
+    print("🔥 API PRODUTOS EXECUTOU")
 
     conn = conectar()
     cur = conn.cursor()
