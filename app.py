@@ -3,15 +3,6 @@ from conexao import conectar
 app = Flask(__name__)
 app.secret_key = "nvsistema2025"
 
-@app.route("/")
-def inicio():
-
-    if "login_id" not in session:
-        return redirect("/login")
-
-    return redirect("/painel")
-
-
 @app.route("/api/salvar_empresa", methods=["POST"])
 def salvar_empresa():
 
@@ -1563,27 +1554,6 @@ def tickets():
         tickets=tickets
     )
 
-
-from flask import session, request, redirect
-@app.before_request
-def proteger_rotas():
-
-    rotas_livres = [
-        "login",
-        "static",
-        "api_produtos",
-        "api_salvar_produto",
-        "api_tickets",
-        "api_vendas",
-        "api_salvar_venda",
-    ]
-
-    # deixar APIs funcionarem sem login (usam token)
-    if request.endpoint in rotas_livres:
-        return
-
-    if "login_id" not in session:
-        return redirect("/login")
 # ======================================================
 # RUN
 # ======================================================
