@@ -1563,6 +1563,23 @@ def tickets():
         tickets=tickets
     )
 
+
+from flask import session, request, redirect
+
+@app.before_request
+def proteger_rotas():
+
+    # 🔥 NUNCA tocar em API
+    if request.path.startswith("/api/"):
+        return
+
+    # rotas livres
+    if request.endpoint in ("login", "static"):
+        return
+
+    # proteção normal
+    if "login_id" not in session:
+        return redirect("/login")
 # ======================================================
 # RUN
 # ======================================================
