@@ -1569,18 +1569,17 @@ from flask import session, request, redirect
 @app.before_request
 def proteger_rotas():
 
-    rotas_livres = [
-        "login",
-        "static"
-    ]
-
-    # NÃO bloquear API
+    # 🔥 NUNCA bloquear API
     if request.path.startswith("/api/"):
         return
+
+    # rotas livres
+    rotas_livres = ["login", "static"]
 
     if request.endpoint in rotas_livres:
         return
 
+    # proteção normal
     if "login_id" not in session:
         return redirect("/login")
 # ======================================================
