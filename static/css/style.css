@@ -463,3 +463,14 @@ table tr:hover{
 
     font-size:16px;
 }
+.btn-logout {
+    color: white;
+    margin-top:6px;
+    width:100%;
+    padding:6px;
+    border:none;
+    border-radius:6px;
+    background:red;
+    font-size:16px;
+    cursor:pointer;
+}

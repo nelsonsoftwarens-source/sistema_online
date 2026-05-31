@@ -30,10 +30,6 @@
 
             <h1>{{ empresa_nome }}</h1>
 
-            <span>
-                💵 {{ empresa_moeda }}
-            </span>
-
         </div>
         
         <!-- FOOTER SIDEBAR -->
@@ -41,7 +37,7 @@
 
             <div class="usuario-logado">
 
-                👤 {{ session.get('empresa_nome') }}
+                {{ session.get('empresa_nome') }}
 
             </div>
 

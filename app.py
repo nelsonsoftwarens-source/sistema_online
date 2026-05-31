@@ -11,34 +11,6 @@ def inicio():
 
     return redirect("/painel")
 
-@app.route("/")
-def home():
-
-    if "empresa_id" not in session:
-        return redirect("/login")
-
-    conn = conectar()
-    cur = conn.cursor()
-
-    cur.execute("""
-        SELECT nome, moeda
-        FROM empresa
-        LIMIT 1
-    """)
-
-    empresa = cur.fetchone()
-
-    cur.close()
-    conn.close()
-
-    empresa_nome = empresa[0] if empresa else " "
-    empresa_moeda = empresa[1] if empresa else "ERP"
-
-    return render_template(
-        "index.html",
-        empresa_nome=empresa_nome,
-        empresa_moeda=empresa_moeda
-    )
 
 @app.route("/api/salvar_empresa", methods=["POST"])
 def salvar_empresa():
@@ -1203,10 +1175,23 @@ def painel():
     conn = conectar()
     cur = conn.cursor()
 
-    # ==========================================
-    # ULTIMOS MOVIMENTOS
-    # ==========================================
+    # ==========================
+    # DADOS DA EMPRESA
+    # ==========================
+    cur.execute("""
+        SELECT nome, moeda
+        FROM empresa
+        WHERE id = %s
+    """, (empresa_id,))
 
+    empresa = cur.fetchone()
+
+    empresa_nome = empresa[0] if empresa else ""
+    empresa_moeda = empresa[1] if empresa else "ERP"
+
+    # ==========================
+    # ÚLTIMOS MOVIMENTOS
+    # ==========================
     cur.execute("""
         SELECT
             id,
@@ -1224,43 +1209,31 @@ def painel():
 
     movimentos = cur.fetchall()
 
-    # ==========================================
     # TOTAL VENDAS
-    # ==========================================
-
     cur.execute("""
         SELECT COALESCE(SUM(valor_total),0)
         FROM painel
         WHERE empresa_id = %s
         AND tipo = 'VENDA'
     """, (empresa_id,))
-
     total_vendas = cur.fetchone()[0]
 
-    # ==========================================
     # TOTAL DESPESAS
-    # ==========================================
-
     cur.execute("""
         SELECT COALESCE(SUM(valor_total),0)
         FROM painel
         WHERE empresa_id = %s
         AND tipo = 'DESPESA'
     """, (empresa_id,))
-
     total_despesas = cur.fetchone()[0]
 
-    # ==========================================
     # TOTAL COMPRAS
-    # ==========================================
-
     cur.execute("""
         SELECT COALESCE(SUM(valor_total),0)
         FROM painel
         WHERE empresa_id = %s
         AND tipo = 'COMPRA'
     """, (empresa_id,))
-
     total_compras = cur.fetchone()[0]
 
     cur.close()
@@ -1268,11 +1241,14 @@ def painel():
 
     return render_template(
         "painel.html",
+        empresa_nome=empresa_nome,
+        empresa_moeda=empresa_moeda,
         movimentos=movimentos,
         total_vendas=total_vendas,
         total_despesas=total_despesas,
         total_compras=total_compras
     )
+
 @app.route("/api/salvar_ticket", methods=["POST"])
 def api_salvar_ticket():
 
