@@ -114,68 +114,16 @@ def logout():
     session.clear()
     return redirect("/login")
 
-
 # ======================================================
 # VERIFICAR LOGIN
 # ======================================================
 def verificar_login():
     return "empresa_id" in session
 
-# ======================================================
-# PRODUTOS
-# ======================================================
 @app.route("/api/produtos")
 def api_produtos():
-
-    token = request.args.get("token")
-
-    print("TOKEN RECEBIDO:", repr(token))
     print("🔥 API PRODUTOS EXECUTOU")
-
-    conn = conectar()
-    cur = conn.cursor()
-
-    # validar login
-    cur.execute("""
-        SELECT empresa_id
-        FROM logins_empresa
-        WHERE token = %s
-    """, (token,))
-
-    row = cur.fetchone()
-
-    print("LOGIN ENCONTRADO:", row)
-
-    if not row:
-        return jsonify({"erro": "TOKEN INVALIDO"}), 401
-
-    empresa_id = row[0]
-
-    # buscar produtos dessa empresa
-    cur.execute("""
-        SELECT descricao, preco_venda, preco_compra, categoria, barcode, ativo
-        FROM produtos
-        WHERE empresa_id = %s
-    """, (empresa_id,))
-    produtos = cur.fetchall()
-
-    cur.close()
-    conn.close()
-
-    # converter para JSON
-    resultado = [
-        {
-            "descricao": p[0],
-            "preco_venda": p[1],
-            "preco_compra": p[2],
-            "categoria": p[3],
-            "barcode": p[4],
-            "ativo": p[5]
-        }
-        for p in produtos
-    ]
-
-    return jsonify(resultado)
+    return jsonify([])
 
 @app.route("/produtos")
 def produtos():
