@@ -1,5 +1,7 @@
 from flask import Flask, request, jsonify, render_template, redirect, session
 from conexao import conectar
+from flask import session
+import secrets
 app = Flask(__name__)
 app.secret_key = "nvsistema2025"
 
@@ -16,6 +18,10 @@ def inicio():
 def salvar_empresa():
 
     dados = request.json
+    token = request.args.get("token")
+
+    if not token:
+        return jsonify({"erro": "SEM TOKEN"}), 401
 
     login_id = dados.get("login_id")
 
@@ -76,6 +82,8 @@ def salvar_empresa():
 # ======================================================
 # LOGIN
 # ======================================================
+
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
 
@@ -86,6 +94,7 @@ def login():
 
         conn = conectar()
         cur = conn.cursor()
+
         cur.execute("""
             SELECT le.id, e.id, e.nome
             FROM logins_empresa le
@@ -96,14 +105,37 @@ def login():
 
         row = cur.fetchone()
 
-        if row:
-            session["login_id"] = row[0]
-            session["empresa_id"] = row[1]
-            session["empresa_nome"] = row[2]
+        if not row:
+            return "LOGIN INVALIDO", 401
 
-            return redirect("/")
+        login_id = row[0]
+        empresa_id = row[1]
+        empresa_nome = row[2]
 
-        return "LOGIN INVALIDO"
+        # ==========================================
+        # 🔑 GERAR TOKEN PROFISSIONAL (API)
+        # ==========================================
+        token = secrets.token_hex(32)
+
+        cur.execute("""
+            UPDATE logins_empresa
+            SET token = %s
+            WHERE id = %s
+        """, (token, login_id))
+
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        # ==========================================
+        # SESSION (PAINEL WEB)
+        # ==========================================
+        session["login_id"] = login_id
+        session["empresa_id"] = empresa_id
+        session["empresa_nome"] = empresa_nome
+        session["token"] = token
+
+        return redirect("/painel")
 
     return render_template("login.html")
 # ======================================================
@@ -131,6 +163,10 @@ def api_produtos():
 
     print("TOKEN RECEBIDO:", repr(token))
     print("🔥 API PRODUTOS EXECUTOU")
+    token = request.args.get("token")
+
+    if not token:
+        return jsonify({"erro": "SEM TOKEN"}), 401
 
     conn = conectar()
     cur = conn.cursor()
@@ -514,6 +550,9 @@ def api_vendas():
 
     token = request.args.get("token")
 
+    if not token:
+        return jsonify({"erro": "SEM TOKEN"}), 401
+
     conn = conectar()
     cur = conn.cursor()
 
@@ -589,6 +628,10 @@ def api_salvar_venda():
     try:
         dados = request.json
         token = dados.get("token")
+        token = request.args.get("token")
+
+        if not token:
+            return jsonify({"erro": "SEM TOKEN"}), 401
 
         conn = conectar()
         cur = conn.cursor()
@@ -884,6 +927,10 @@ def salvar_login():
     email = dados.get("email")
     senha = dados.get("senha")
     token = dados.get("token")
+    token = request.args.get("token")
+
+    if not token:
+        return jsonify({"erro": "SEM TOKEN"}), 401
 
     conn = conectar()
     cur = conn.cursor()
@@ -1032,6 +1079,10 @@ def api_salvar_movimento():
         dados = request.json
 
         token = dados.get("token")
+        token = request.args.get("token")
+
+        if not token:
+            return jsonify({"erro": "SEM TOKEN"}), 401
 
         conn = conectar()
         cur = conn.cursor()
@@ -1256,6 +1307,7 @@ def api_salvar_ticket():
     try:
         dados = request.json or {}
         token = dados.get("token")
+        token = request.args.get("token")
 
         if not token:
             return jsonify({"erro": "TOKEN EM FALTA"}), 400
@@ -1420,6 +1472,10 @@ def api_salvar_painel():
         dados = request.json
 
         token = dados.get("token")
+        token = request.args.get("token")
+
+        if not token:
+            return jsonify({"erro": "SEM TOKEN"}), 401
 
         # ==========================================
         # VALIDAR TOKEN
