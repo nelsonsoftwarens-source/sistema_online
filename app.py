@@ -3,6 +3,15 @@ from conexao import conectar
 app = Flask(__name__)
 app.secret_key = "nvsistema2025"
 
+@app.route("/")
+def inicio():
+
+    if "login_id" not in session:
+        return redirect("/login")
+
+    return redirect("/painel")
+
+
 @app.route("/api/salvar_empresa", methods=["POST"])
 def salvar_empresa():
 
@@ -116,12 +125,7 @@ def verificar_login():
 # ======================================================
 @app.route("/api/produtos")
 def api_produtos():
-
     token = request.args.get("token")
-
-    print("TOKEN RECEBIDO:", repr(token))
-    print("🔥 API PRODUTOS EXECUTOU")
-
     conn = conectar()
     cur = conn.cursor()
 
@@ -1163,11 +1167,18 @@ def painel():
 
     empresa_id = session["empresa_id"]
 
+    # ==========================
+    # FILTROS
+    # ==========================
+    inicio = request.args.get("inicio")
+    fim = request.args.get("fim")
+    usuario_filtro = request.args.get("usuario")
+
     conn = conectar()
     cur = conn.cursor()
 
     # ==========================
-    # DADOS DA EMPRESA
+    # EMPRESA
     # ==========================
     cur.execute("""
         SELECT nome, moeda
@@ -1176,56 +1187,57 @@ def painel():
     """, (empresa_id,))
 
     empresa = cur.fetchone()
-
     empresa_nome = empresa[0] if empresa else ""
-    empresa_moeda = empresa[1] if empresa else "ERP"
+    empresa_moeda = empresa[1] if empresa else "MT"
+
+    # =========================================================
+    # WHERE BASE (VENDAS)
+    # =========================================================
+    where_vendas = """
+        v.empresa_id = %s
+        AND NOT EXISTS (
+            SELECT 1
+            FROM tickets t
+            WHERE t.tiket_num = v.tiket_num
+            AND t.tipo = 'consumo_interno'
+        )
+    """
+
+    params_vendas = [empresa_id]
+
+    if inicio and fim:
+        where_vendas += " AND v.data_venda BETWEEN %s AND %s"
+        params_vendas.extend([inicio, fim])
+
+    if usuario_filtro:
+        where_vendas += " AND v.registrado_por = %s"
+        params_vendas.append(usuario_filtro)
 
     # ==========================
-    # ÚLTIMOS MOVIMENTOS
-    # ==========================
-    cur.execute("""
-        SELECT
-            id,
-            tipo,
-            referencia,
-            valor_total,
-            status,
-            usuario,
-            data_registro
-        FROM painel
-        WHERE empresa_id = %s
-        ORDER BY id DESC
-        LIMIT 20
-    """, (empresa_id,))
-
-    movimentos = cur.fetchall()
-
     # TOTAL VENDAS
-    cur.execute("""
-        SELECT COALESCE(SUM(valor_total),0)
-        FROM painel
-        WHERE empresa_id = %s
-        AND tipo = 'VENDA'
-    """, (empresa_id,))
-    total_vendas = cur.fetchone()[0]
+    # ==========================
+    cur.execute(f"""
+        SELECT COALESCE(SUM(v.total),0)
+        FROM vendas v
+        WHERE {where_vendas}
+    """, params_vendas)
 
-    # TOTAL DESPESAS
-    cur.execute("""
-        SELECT COALESCE(SUM(valor_total),0)
-        FROM painel
-        WHERE empresa_id = %s
-        AND tipo = 'DESPESA'
-    """, (empresa_id,))
-    total_despesas = cur.fetchone()[0]
+    total_vendas = cur.fetchone()[0] or 0
 
-    # TOTAL COMPRAS
-    cur.execute("""
-        SELECT COALESCE(SUM(valor_total),0)
-        FROM painel
-        WHERE empresa_id = %s
-        AND tipo = 'COMPRA'
-    """, (empresa_id,))
-    total_compras = cur.fetchone()[0]
+    # ==========================
+    # VENDAS POR UTILIZADOR
+    # ==========================
+    cur.execute(f"""
+        SELECT
+            COALESCE(v.registrado_por,'Desconhecido'),
+            SUM(COALESCE(v.total,0))
+        FROM vendas v
+        WHERE {where_vendas}
+        GROUP BY v.registrado_por
+        ORDER BY 2 DESC
+    """, params_vendas)
+
+    vendas_por_usuario = cur.fetchall()
 
     cur.close()
     conn.close()
@@ -1234,11 +1246,232 @@ def painel():
         "painel.html",
         empresa_nome=empresa_nome,
         empresa_moeda=empresa_moeda,
-        movimentos=movimentos,
         total_vendas=total_vendas,
-        total_despesas=total_despesas,
-        total_compras=total_compras
+        vendas_por_usuario=vendas_por_usuario
     )
+@app.route("/stock")
+def stock():
+
+    if "empresa_id" not in session:
+        return redirect("/login")
+
+    empresa_id = session["empresa_id"]
+
+    conn = conectar()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT
+            p.id,
+            p.descricao,
+            a.local,
+            COALESCE(SUM(s.quantidade), 0) AS saldo,
+            MAX(s.data_servidor) AS ultima_atualizacao
+        FROM stock s
+        JOIN produtos p ON p.id = s.produto
+        JOIN armazem a ON a.id = s.local
+        WHERE p.empresa_id = %s
+        GROUP BY p.id, p.descricao, a.local
+        ORDER BY p.descricao
+    """, (empresa_id,))
+
+    stock = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return render_template("stock.html", stock=stock)
+
+@app.route("/api/stock", methods=["GET"])
+def api_stock():
+
+    try:
+        token = request.args.get("token")
+
+        if not token:
+            return {"error": "token missing"}, 401
+
+        conn = conectar()
+        cur = conn.cursor()
+
+        cur.execute("""
+            SELECT
+                s.id,
+                p.id,
+                p.descricao,
+                a.local,
+                s.quantidade,
+                s.data_local,
+                s.data_servidor,
+                s.uuid,
+                s.tipo_movimentacao,
+                s.sincronizado,
+                s.origem
+            FROM stock s
+            JOIN produtos p ON p.id = s.produto
+            JOIN armazem a ON a.id = s.local
+            ORDER BY COALESCE(s.data_servidor, s.data_local) DESC
+        """)
+
+        rows = cur.fetchall()
+
+        cur.close()
+        conn.close()
+
+        return jsonify([
+            {
+                "id": r[0],
+                "produto_id": r[1],
+                "produto": r[2],
+                "armazem": r[3],
+                "quantidade": float(r[4]),
+                "data_local": str(r[5]) if r[5] else None,
+                "data_servidor": str(r[6]) if r[6] else None,
+                "uuid": r[7],
+                "tipo": r[8],
+                "sincronizado": r[9],
+                "origem": r[10]
+            }
+            for r in rows
+        ])
+
+    except Exception as e:
+        return {"error": str(e)}, 500
+    
+@app.route("/api/stock_filtrado", methods=["GET"])
+def api_stock_filtrado():
+
+    try:
+
+        produto = request.args.get("produto")
+        armazem = request.args.get("armazem")
+
+        conn = conectar()
+        cur = conn.cursor()
+
+        sql = """
+            SELECT
+                p.descricao,
+                a.local,
+                COALESCE(SUM(s.quantidade), 0) AS saldo,
+                MAX(COALESCE(s.data_servidor, s.data_local)) AS ultima_atualizacao
+            FROM stock s
+            JOIN produtos p ON p.id = s.produto
+            JOIN armazem a ON a.id = s.local
+            WHERE 1=1
+        """
+
+        params = []
+
+        if produto:
+            sql += " AND p.descricao ILIKE %s"
+            params.append(f"%{produto}%")
+
+        if armazem:
+            sql += " AND a.local ILIKE %s"
+            params.append(f"%{armazem}%")
+
+        sql += """
+            GROUP BY p.descricao, a.local
+            ORDER BY p.descricao
+        """
+
+        cur.execute(sql, params)
+
+        dados = cur.fetchall()
+
+        cur.close()
+        conn.close()
+
+        return jsonify([
+            {
+                "produto": r[0],
+                "armazem": r[1],
+                "quantidade": float(r[2]),
+                "ultima_atualizacao": str(r[3]) if r[3] else None
+            }
+            for r in dados
+        ])
+
+    except Exception as e:
+        return {"error": str(e)}, 500
+    
+@app.route("/api/sincronizar_armazens", methods=["POST"])
+def sincronizar_armazens():
+
+    try:
+        dados = request.get_json()
+
+        if not dados:
+            return {"error": "sem dados"}, 400
+
+        conn = conectar()
+        cur = conn.cursor()
+
+        inseridos = 0
+        atualizados = 0
+
+        for a in dados:
+
+            uuid = a.get("uuid")
+            local = a.get("local")  # nome do armazém
+            empresa_id = a.get("empresa_id")
+            origem = a.get("origem", "PDV")
+
+            if not local:
+                continue
+
+            # ==========================================
+            # VERIFICAR SE JÁ EXISTE (por UUID ou nome)
+            # ==========================================
+            cur.execute("""
+                SELECT id FROM armazem
+                WHERE uuid = %s OR local = %s
+            """, (uuid, local))
+
+            existe = cur.fetchone()
+
+            if existe:
+
+                cur.execute("""
+                    UPDATE armazem
+                    SET local = %s
+                    WHERE id = %s
+                """, (local, existe[0]))
+
+                atualizados += 1
+
+            else:
+
+                cur.execute("""
+                    INSERT INTO armazem (
+                        uuid,
+                        local,
+                        empresa_id,
+                        origem
+                    )
+                    VALUES (%s,%s,%s,%s)
+                """, (
+                    uuid,
+                    local,
+                    empresa_id,
+                    origem
+                ))
+
+                inseridos += 1
+
+        conn.commit()
+        cur.close()
+        conn.close()
+
+        return {
+            "status": "ok",
+            "inseridos": inseridos,
+            "atualizados": atualizados
+        }
+
+    except Exception as e:
+        return {"error": str(e)}, 500
 
 @app.route("/api/salvar_ticket", methods=["POST"])
 def api_salvar_ticket():
@@ -1554,6 +1787,27 @@ def tickets():
         tickets=tickets
     )
 
+
+from flask import session, request, redirect
+@app.before_request
+def proteger_rotas():
+
+    rotas_livres = [
+        "login",
+        "static",
+        "api_produtos",
+        "api_salvar_produto",
+        "api_tickets",
+        "api_vendas",
+        "api_salvar_venda",
+    ]
+
+    # deixar APIs funcionarem sem login (usam token)
+    if request.endpoint in rotas_livres:
+        return
+
+    if "login_id" not in session:
+        return redirect("/login")
 # ======================================================
 # RUN
 # ======================================================

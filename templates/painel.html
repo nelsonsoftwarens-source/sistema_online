@@ -7,93 +7,81 @@
 </div>
 
 <!-- ====================================== -->
-<!-- CARDS -->
+<!-- FILTROS -->
+<!-- ====================================== -->
+
+<div class="filtros">
+
+    <form method="GET" action="/painel" class="form-filtros">
+
+        <div>
+            <label>Data Início</label>
+            <input type="date" name="inicio"
+                   value="{{ request.args.get('inicio','') }}">
+        </div>
+
+        <div>
+            <label>Data Fim</label>
+            <input type="date" name="fim"
+                   value="{{ request.args.get('fim','') }}">
+        </div>
+
+        <div>
+            <label>Usuário</label>
+            <input type="text" name="usuario"
+                   placeholder="Filtrar usuário"
+                   value="{{ request.args.get('usuario','') }}">
+        </div>
+
+        <button type="submit">🔎 Filtrar</button>
+
+    </form>
+
+</div>
+
+<!-- ====================================== -->
+<!-- CARD TOTAL VENDAS -->
 <!-- ====================================== -->
 
 <div class="cards">
 
-    <div class="card">
+    <div class="card destaque">
         <h3>💰 Total Vendas</h3>
-        <span>{{ total_vendas }} MT</span>
-    </div>
-
-    <div class="card">
-        <h3>📦 Total Compras</h3>
-        <span>{{ total_compras }} MT</span>
-    </div>
-
-    <div class="card">
-        <h3>💸 Total Despesas</h3>
-        <span>{{ total_despesas }} MT</span>
+        <span>
+            {{ (total_vendas or 0)|float|round(2) }}
+        </span>
     </div>
 
 </div>
 
 <!-- ====================================== -->
-<!-- TABELA -->
+<!-- VENDAS POR UTILIZADOR -->
 <!-- ====================================== -->
 
 <div class="painel">
 
-    <h3>🕒 Últimos Movimentos</h3>
+    <h3>👥 Vendas por Utilizador</h3>
 
     <table>
 
         <thead>
-
             <tr>
-                <th>ID</th>
-                <th>Tipo</th>
-                <th>Referência</th>
-                <th>Valor</th>
-                <th>Status</th>
                 <th>Usuário</th>
-                <th>Data</th>
+                <th>Total Vendido</th>
             </tr>
-
         </thead>
 
         <tbody>
 
-            {% for m in movimentos %}
+            {% for u, t in vendas_por_usuario %}
 
             <tr>
 
-                <td>{{ m[0] }}</td>
+                <td>{{ u or "Desconhecido" }}</td>
 
                 <td>
-
-                    {% if m[1] == "VENDA" %}
-                        💰 VENDA
-                    {% elif m[1] == "COMPRA" %}
-                        📦 COMPRA
-                    {% elif m[1] == "DESPESA" %}
-                        💸 DESPESA
-                    {% else %}
-                        {{ m[1] }}
-                    {% endif %}
-
+                    {{ (t or 0)|float|round(2) }}
                 </td>
-
-                <td>{{ m[2] }}</td>
-
-                <td>
-                    {{ m[3] }} MT
-                </td>
-
-                <td>
-
-                    {% if m[4] == "PAGO" %}
-                        🟢 PAGO
-                    {% else %}
-                        🟠 {{ m[4] }}
-                    {% endif %}
-
-                </td>
-
-                <td>{{ m[5] }}</td>
-
-                <td>{{ m[6] }}</td>
 
             </tr>
 

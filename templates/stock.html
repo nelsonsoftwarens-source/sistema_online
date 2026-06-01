@@ -1,0 +1,126 @@
+{% extends 'base.html' %}
+
+{% block conteudo %}
+
+<div class="stock-layout">
+
+    <!-- ========================= -->
+    <!-- FILTROS -->
+    <!-- ========================= -->
+    <div class="stock-filtros">
+
+        <h2>📦 Stock</h2>
+
+        <!-- FILTRO GLOBAL -->
+        <input type="text"
+               id="filtro-global"
+               placeholder="🔎 Pesquisar produto ou armazém..."
+               class="campo-busca">
+
+        <!-- DATA -->
+        <div style="display:flex; gap:10px; margin-top:10px;">
+
+            <input type="date" id="data-inicio">
+            <input type="date" id="data-fim">
+
+        </div>
+
+        <button onclick="limparFiltros()">
+            🔄 Limpar
+        </button>
+
+    </div>
+
+    <!-- ========================= -->
+    <!-- TABELA -->
+    <!-- ========================= -->
+    <div class="stock-tabela">
+
+        <table>
+
+            <thead>
+                <tr>
+                    <th>Produto</th>
+                    <th>Armazém</th>
+                    <th>Qtd</th>
+                    <th>Última Atualização</th>
+                </tr>
+            </thead>
+
+            <tbody id="tbody-stock">
+
+                {% for s in stock %}
+
+                <tr class="linha-stock"
+                    data-produto="{{ s[1] }}"
+                    data-armazem="{{ s[2] }}"
+                    data-data="{{ s[4] }}">
+
+                    <td>{{ s[1] }}</td>
+                    <td>{{ s[2] }}</td>
+                    <td>{{ s[3] }}</td>
+                    <td>{{ s[4] }}</td>
+
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+<script>
+
+function filtrarStock(){
+
+    let texto = document.getElementById("filtro-global").value.toLowerCase();
+    let dataInicio = document.getElementById("data-inicio").value;
+    let dataFim = document.getElementById("data-fim").value;
+
+    let linhas = document.querySelectorAll(".linha-stock");
+
+    linhas.forEach(l => {
+
+        let produto = l.dataset.produto.toLowerCase();
+        let armazem = l.dataset.armazem.toLowerCase();
+        let data = l.dataset.data;
+
+        // FILTRO TEXTO GLOBAL
+        let okTexto =
+            produto.includes(texto) ||
+            armazem.includes(texto);
+
+        // FILTRO DATA
+        let okData = true;
+
+        if (dataInicio && data < dataInicio) okData = false;
+        if (dataFim && data > dataFim) okData = false;
+
+        if (okTexto && okData){
+            l.style.display = "";
+        } else {
+            l.style.display = "none";
+        }
+    });
+}
+
+document.getElementById("filtro-global").addEventListener("input", filtrarStock);
+document.getElementById("data-inicio").addEventListener("change", filtrarStock);
+document.getElementById("data-fim").addEventListener("change", filtrarStock);
+
+function limparFiltros(){
+
+    document.getElementById("filtro-global").value = "";
+    document.getElementById("data-inicio").value = "";
+    document.getElementById("data-fim").value = "";
+
+    filtrarStock();
+}
+
+</script>
+
+{% endblock %}
