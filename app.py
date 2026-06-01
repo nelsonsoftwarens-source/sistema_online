@@ -1500,6 +1500,9 @@ def api_armazens():
 @app.route("/api/salvar_armazem", methods=["POST"])
 def api_salvar_armazem():
 
+    dados = request.get_json()
+    print("DADOS:", dados)
+
     try:
 
         dados = request.get_json()
