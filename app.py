@@ -1497,6 +1497,64 @@ def api_armazens():
         for r in rows
     ])
 
+@app.route("/api/salvar_armazem", methods=["POST"])
+def api_salvar_armazem():
+
+    try:
+
+        dados = request.get_json()
+
+        token = dados.get("token")
+        local = dados.get("local")
+
+        if not token:
+            return jsonify({
+                "sucesso": False,
+                "erro": "token ausente"
+            }), 401
+
+        if not local:
+            return jsonify({
+                "sucesso": False,
+                "erro": "local ausente"
+            }), 400
+
+        conn = conectar()
+        cur = conn.cursor()
+
+        cur.execute("""
+            SELECT id
+            FROM armazem
+            WHERE local = %s
+        """, (local,))
+
+        existe = cur.fetchone()
+
+        if not existe:
+
+            cur.execute("""
+                INSERT INTO armazem (
+                    local
+                )
+                VALUES (%s)
+            """, (local,))
+
+            conn.commit()
+
+        cur.close()
+        conn.close()
+
+        return jsonify({
+            "sucesso": True
+        })
+
+    except Exception as e:
+
+        return jsonify({
+            "sucesso": False,
+            "erro": str(e)
+        }), 500
+
 @app.route("/api/salvar_ticket", methods=["POST"])
 def api_salvar_ticket():
 
@@ -1819,14 +1877,27 @@ def proteger_rotas():
     rotas_livres = [
         "login",
         "static",
+
+        # PRODUTOS
         "api_produtos",
         "api_salvar_produto",
-        "api_tickets",
+
+        # VENDAS
         "api_vendas",
         "api_salvar_venda",
+
+        # TICKETS
+        "api_tickets",
+
+        # STOCK
+        "api_stock",
+        "api_salvar_stock",
+
+        # ARMAZENS
+        "api_armazens",
+        "api_salvar_armazem",
     ]
 
-    # deixar APIs funcionarem sem login (usam token)
     if request.endpoint in rotas_livres:
         return
 
