@@ -1473,6 +1473,30 @@ def sincronizar_armazens():
     except Exception as e:
         return {"error": str(e)}, 500
 
+@app.route("/api/armazens", methods=["GET"])
+def api_armazens():
+    conn = conectar()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT uuid, local, empresa_id
+        FROM armazem
+    """)
+
+    rows = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return jsonify([
+        {
+            "uuid": r[0],
+            "local": r[1],
+            "empresa_id": r[2]
+        }
+        for r in rows
+    ])
+
 @app.route("/api/salvar_ticket", methods=["POST"])
 def api_salvar_ticket():
 
