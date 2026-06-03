@@ -1463,7 +1463,7 @@ def api_salvar_stock():
                     quantidade = %s,
                     local = %s,
                     data_local = %s,
-                    ultima_atualizacao = %s,
+                    data_servidor = %s,
                     tipo_movimentacao = %s
                 WHERE id = %s
             """, (
