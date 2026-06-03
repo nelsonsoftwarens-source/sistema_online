@@ -1475,88 +1475,108 @@ def sincronizar_armazens():
 
 @app.route("/api/armazens", methods=["GET"])
 def api_armazens():
+
+    token = request.args.get("token")
+
+    empresa = obter_empresa_por_token(token)
+
+    if not empresa:
+        return jsonify({
+            "erro": "TOKEN INVALIDO"
+        }), 401
+
+    empresa_id = empresa[0]
+
     conn = conectar()
     cur = conn.cursor()
 
     cur.execute("""
-        SELECT uuid, local, empresa_id
+        SELECT
+            id,
+            local,
+            ativo
         FROM armazem
-    """)
+        WHERE empresa_id = %s
+        ORDER BY local
+    """, (empresa_id,))
 
-    rows = cur.fetchall()
+    dados = cur.fetchall()
 
     cur.close()
     conn.close()
 
     return jsonify([
         {
-            "uuid": r[0],
+            "id": r[0],
             "local": r[1],
-            "empresa_id": r[2]
+            "ativo": r[2]
         }
-        for r in rows
+        for r in dados
     ])
 
+from flask import request, jsonify
+import uuid
+
 @app.route("/api/salvar_armazem", methods=["POST"])
-def api_salvar_armazem():
+def salvar_armazem():
 
-    dados = request.get_json()
-    print("DADOS:", dados)
+    dados = request.json
 
-    try:
+    token = dados.get("token")
 
-        dados = request.get_json()
+    empresa = obter_empresa_por_token(token)
 
-        token = dados.get("token")
-        local = dados.get("local")
+    if not empresa:
+        return jsonify({
+            "erro": "TOKEN INVALIDO"
+        }), 401
 
-        if not token:
-            return jsonify({
-                "sucesso": False,
-                "erro": "token ausente"
-            }), 401
+    empresa_id = empresa[0]
 
-        if not local:
-            return jsonify({
-                "sucesso": False,
-                "erro": "local ausente"
-            }), 400
+    conn = conectar()
+    cur = conn.cursor()
 
-        conn = conectar()
-        cur = conn.cursor()
+    # =====================================
+    # VERIFICA ARMAZÉM
+    # =====================================
+
+    cur.execute("""
+        SELECT id
+        FROM armazem
+        WHERE lower(local) = lower(%s)
+        AND empresa_id = %s
+    """, (
+        dados.get("local"),
+        empresa_id
+    ))
+
+    existe = cur.fetchone()
+
+    if not existe:
 
         cur.execute("""
-            SELECT id
-            FROM armazem
-            WHERE local = %s
-        """, (local,))
+            INSERT INTO armazem (
+                empresa_id,
+                local,
+                ativo
+            )
+            VALUES (%s,%s,%s)
+        """, (
+            empresa_id,
+            dados.get("local"),
+            True
+        ))
 
-        existe = cur.fetchone()
+        conn.commit()
 
-        if not existe:
+        print("✅ ARMAZÉM SALVO:", dados.get("local"))
 
-            cur.execute("""
-                INSERT INTO armazem (
-                    local
-                )
-                VALUES (%s)
-            """, (local,))
+    cur.close()
+    conn.close()
 
-            conn.commit()
-
-        cur.close()
-        conn.close()
-
-        return jsonify({
-            "sucesso": True
-        })
-
-    except Exception as e:
-
-        return jsonify({
-            "sucesso": False,
-            "erro": str(e)
-        }), 500
+    return jsonify({
+        "status": "ok"
+    })
 
 @app.route("/api/salvar_ticket", methods=["POST"])
 def api_salvar_ticket():
