@@ -1414,8 +1414,13 @@ def api_salvar_stock():
     try:
 
         dados = request.json
+        print("================================")
+        print("DADOS RECEBIDOS:")
+        print(dados)
+        print("================================")
 
         token = dados.get("token")
+        print("EMPRESA:", empresa_id)
 
         empresa = obter_empresa_por_token(token)
 
@@ -1470,6 +1475,12 @@ def api_salvar_stock():
             ))
 
         else:
+            print(
+                dados.get("uuid"),
+                dados.get("produto"),
+                dados.get("local"),
+                dados.get("quantidade")
+            )
 
             cur.execute("""
                 INSERT INTO stock (
