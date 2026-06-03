@@ -1402,48 +1402,101 @@ def sincronizar_armazens():
 
     try:
 
-        a = request.get_json()
+        dados = request.get_json()
+
+        token = dados.get("token")
+
+        empresa = obter_empresa_por_token(token)
+
+        if not empresa:
+            return jsonify({
+                "error": "TOKEN INVALIDO"
+            }), 401
+
+        empresa_id = empresa[0]
+
+        uuid_armazem = dados.get("uuid")
+        local = dados.get("local")
+
+        if not local:
+            return jsonify({
+                "error": "local obrigatorio"
+            }), 400
 
         conn = conectar()
         cur = conn.cursor()
 
-        uuid_armazem = a.get("uuid")
-        local = a.get("local")
-        empresa_id = a.get("empresa_id")
-        origem = a.get("origem", "PDV")
+        # ==========================================
+        # PROCURA POR UUID
+        # ==========================================
+        existe = None
 
-        cur.execute("""
-            SELECT id
-            FROM armazem
-            WHERE uuid = %s
-        """, (uuid_armazem,))
+        if uuid_armazem:
 
-        existe = cur.fetchone()
+            cur.execute("""
+                SELECT id
+                FROM armazem
+                WHERE uuid = %s
+                AND empresa_id = %s
+            """, (
+                uuid_armazem,
+                empresa_id
+            ))
 
+            existe = cur.fetchone()
+
+        # ==========================================
+        # PROCURA POR NOME
+        # ==========================================
+        if not existe:
+
+            cur.execute("""
+                SELECT id
+                FROM armazem
+                WHERE lower(local) = lower(%s)
+                AND empresa_id = %s
+            """, (
+                local,
+                empresa_id
+            ))
+
+            existe = cur.fetchone()
+
+        # ==========================================
+        # UPDATE
+        # ==========================================
         if existe:
 
             cur.execute("""
                 UPDATE armazem
-                SET local=%s
-                WHERE id=%s
+                SET
+                    local = %s,
+                    uuid = COALESCE(uuid, %s)
+                WHERE id = %s
             """, (
                 local,
+                uuid_armazem,
                 existe[0]
             ))
 
+        # ==========================================
+        # INSERT
+        # ==========================================
         else:
 
             cur.execute("""
                 INSERT INTO armazem (
                     uuid,
                     local,
-                    empresa_id
+                    empresa_id,
+                    ativo
                 )
-                VALUES (%s,%s,%s)
+                VALUES (%s,%s,%s,%s)
             """, (
                 uuid_armazem,
                 local,
-                empresa_id
+                empresa_id,
+                True
             ))
 
         conn.commit()
@@ -1451,10 +1504,15 @@ def sincronizar_armazens():
         cur.close()
         conn.close()
 
-        return jsonify({"status": "ok"})
+        return jsonify({
+            "status": "ok"
+        })
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+
+        return jsonify({
+            "error": str(e)
+        }), 500
 
 @app.route("/api/salvar_armazem", methods=["POST"])
 def salvar_armazem():
