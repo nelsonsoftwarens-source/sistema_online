@@ -1480,7 +1480,7 @@ def salvar_armazem():
     try:
 
         dados = request.json
-
+        print("DADOS RECEBIDOS:", request.get_json())
         print("DADOS RECEBIDOS:", dados)
 
         token = dados.get("token")
