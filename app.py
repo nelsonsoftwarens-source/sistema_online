@@ -1556,12 +1556,14 @@ def salvar_armazem():
 
         cur.execute("""
             INSERT INTO armazem (
+                uuid,
                 empresa_id,
                 local,
                 ativo
             )
-            VALUES (%s,%s,%s)
+            VALUES (%s,%s,%s,%s)
         """, (
+            str(uuid.uuid4()),
             empresa_id,
             dados.get("local"),
             True
