@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify, render_template, redirect, session
 from conexao import conectar
+import uuid
 app = Flask(__name__)
 app.secret_key = "nvsistema2025"
 
@@ -1545,71 +1546,6 @@ def salvar_armazem():
             "erro": str(e)
         }), 500
     
-from flask import request, jsonify
-import uuid
-
-@app.route("/api/salvar_armazem", methods=["POST"])
-def salvar_armazem():
-
-    dados = request.json
-
-    token = dados.get("token")
-
-    empresa = obter_empresa_por_token(token)
-
-    if not empresa:
-        return jsonify({
-            "erro": "TOKEN INVALIDO"
-        }), 401
-
-    empresa_id = empresa[0]
-
-    conn = conectar()
-    cur = conn.cursor()
-
-    # =====================================
-    # VERIFICA ARMAZÉM
-    # =====================================
-
-    cur.execute("""
-        SELECT id
-        FROM armazem
-        WHERE lower(local) = lower(%s)
-        AND empresa_id = %s
-    """, (
-        dados.get("local"),
-        empresa_id
-    ))
-
-    existe = cur.fetchone()
-
-    if not existe:
-
-        cur.execute("""
-            INSERT INTO armazem (
-                uuid,
-                empresa_id,
-                local,
-                ativo
-            )
-            VALUES (%s,%s,%s,%s)
-        """, (
-            str(uuid.uuid4()),
-            empresa_id,
-            dados.get("local"),
-            True
-        ))
-
-        conn.commit()
-
-        print("✅ ARMAZÉM SALVO:", dados.get("local"))
-
-    cur.close()
-    conn.close()
-
-    return jsonify({
-        "status": "ok"
-    })
 
 @app.route("/api/salvar_ticket", methods=["POST"])
 def api_salvar_ticket():
