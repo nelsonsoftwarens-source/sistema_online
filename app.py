@@ -1271,7 +1271,7 @@ def stock():
         FROM stock s
         JOIN produtos p ON p.id = s.produto
         JOIN armazem a ON a.id = s.local
-        WHERE p.empresa_id = %s
+        WHERE s.empresa_id = %s
         GROUP BY p.id, p.descricao, a.local
         ORDER BY p.descricao
     """, (empresa_id,))
@@ -1287,10 +1287,18 @@ def stock():
 def api_stock():
 
     try:
+
         token = request.args.get("token")
 
         if not token:
             return {"error": "token missing"}, 401
+
+        empresa = obter_empresa_por_token(token)
+
+        if not empresa:
+            return {"error": "token invalido"}, 401
+
+        empresa_id = empresa[0]
 
         conn = conectar()
         cur = conn.cursor()
@@ -1307,12 +1315,14 @@ def api_stock():
                 s.uuid,
                 s.tipo_movimentacao,
                 s.sincronizado,
-                s.origem
+                s.origem,
+                s.empresa_id
             FROM stock s
             JOIN produtos p ON p.id = s.produto
             JOIN armazem a ON a.id = s.local
+            WHERE s.empresa_id = %s
             ORDER BY COALESCE(s.data_servidor, s.data_local) DESC
-        """)
+        """, (empresa_id,))
 
         rows = cur.fetchall()
 
@@ -1331,7 +1341,8 @@ def api_stock():
                 "uuid": r[7],
                 "tipo": r[8],
                 "sincronizado": r[9],
-                "origem": r[10]
+                "origem": r[10],
+                "empresa_id": r[11]
             }
             for r in rows
         ])
