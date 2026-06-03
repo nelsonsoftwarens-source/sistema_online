@@ -1546,6 +1546,55 @@ def salvar_armazem():
             "erro": str(e)
         }), 500
     
+@app.route("/api/armazens", methods=["GET"])
+def api_armazens():
+
+    try:
+
+        token = request.args.get("token")
+
+        empresa = obter_empresa_por_token(token)
+
+        if not empresa:
+            return jsonify([])
+
+        empresa_id = empresa[0]
+
+        conn = conectar()
+        cur = conn.cursor()
+
+        cur.execute("""
+            SELECT
+                id,
+                uuid,
+                local,
+                empresa_id,
+                ativo
+            FROM armazem
+            WHERE empresa_id = %s
+            ORDER BY local
+        """, (empresa_id,))
+
+        dados = cur.fetchall()
+
+        cur.close()
+        conn.close()
+
+        return jsonify([
+            {
+                "id": r[0],
+                "uuid": r[1],
+                "local": r[2],
+                "empresa_id": r[3],
+                "ativo": r[4]
+            }
+            for r in dados
+        ])
+
+    except Exception as e:
+        return jsonify({
+            "erro": str(e)
+        }), 500
 
 @app.route("/api/salvar_ticket", methods=["POST"])
 def api_salvar_ticket():
