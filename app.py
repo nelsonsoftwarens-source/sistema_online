@@ -1310,8 +1310,8 @@ def api_stock():
                 p.descricao,
                 a.local,
                 s.quantidade,
-                s.data_local,
-                s.data_servidor,
+                s.data,
+                s.ultima_atualizacao,
                 s.uuid,
                 s.tipo_movimentacao,
                 s.sincronizado,
@@ -1321,7 +1321,7 @@ def api_stock():
             JOIN produtos p ON p.id = s.produto
             JOIN armazem a ON a.id = s.local
             WHERE s.empresa_id = %s
-            ORDER BY COALESCE(s.data_servidor, s.data_local) DESC
+            ORDER BY COALESCE(s.data_servidor, s.data) DESC
         """, (empresa_id,))
 
         rows = cur.fetchall()
@@ -1336,8 +1336,8 @@ def api_stock():
                 "produto": r[2],
                 "armazem": r[3],
                 "quantidade": float(r[4]),
-                "data_local": str(r[5]) if r[5] else None,
-                "data_servidor": str(r[6]) if r[6] else None,
+                "data": str(r[5]) if r[5] else None,
+                "ultima_atualizacao": str(r[6]) if r[6] else None,
                 "uuid": r[7],
                 "tipo": r[8],
                 "sincronizado": r[9],
