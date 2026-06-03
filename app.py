@@ -1473,47 +1473,78 @@ def sincronizar_armazens():
     except Exception as e:
         return {"error": str(e)}, 500
 
-@app.route("/api/armazens", methods=["GET"])
-def api_armazens():
+@app.route("/api/salvar_armazem", methods=["POST"])
+def salvar_armazem():
 
-    token = request.args.get("token")
+    try:
 
-    empresa = obter_empresa_por_token(token)
+        dados = request.json
 
-    if not empresa:
+        print("DADOS RECEBIDOS:", dados)
+
+        token = dados.get("token")
+
+        empresa = obter_empresa_por_token(token)
+
+        if not empresa:
+            print("TOKEN INVALIDO")
+            return jsonify({"erro": "TOKEN INVALIDO"}), 401
+
+        empresa_id = empresa[0]
+
+        conn = conectar()
+        cur = conn.cursor()
+
+        local = dados.get("local")
+
+        print("EMPRESA:", empresa_id)
+        print("LOCAL:", local)
+
+        cur.execute("""
+            SELECT id
+            FROM armazem
+            WHERE lower(local)=lower(%s)
+            AND empresa_id=%s
+        """, (local, empresa_id))
+
+        existe = cur.fetchone()
+
+        print("EXISTE:", existe)
+
+        if not existe:
+
+            cur.execute("""
+                INSERT INTO armazem (
+                    uuid,
+                    empresa_id,
+                    local,
+                    ativo
+                )
+                VALUES (%s,%s,%s,%s)
+            """, (
+                str(uuid.uuid4()),
+                empresa_id,
+                local,
+                True
+            ))
+
+            conn.commit()
+
+            print("ARMAZEM INSERIDO")
+
+        cur.close()
+        conn.close()
+
+        return jsonify({"status": "ok"})
+
+    except Exception as e:
+
+        print("ERRO SALVAR ARMAZEM:", e)
+
         return jsonify({
-            "erro": "TOKEN INVALIDO"
-        }), 401
-
-    empresa_id = empresa[0]
-
-    conn = conectar()
-    cur = conn.cursor()
-
-    cur.execute("""
-        SELECT
-            id,
-            local,
-            ativo
-        FROM armazem
-        WHERE empresa_id = %s
-        ORDER BY local
-    """, (empresa_id,))
-
-    dados = cur.fetchall()
-
-    cur.close()
-    conn.close()
-
-    return jsonify([
-        {
-            "id": r[0],
-            "local": r[1],
-            "ativo": r[2]
-        }
-        for r in dados
-    ])
-
+            "erro": str(e)
+        }), 500
+    
 from flask import request, jsonify
 import uuid
 
