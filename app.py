@@ -1462,15 +1462,15 @@ def api_salvar_stock():
                     produto = %s,
                     quantidade = %s,
                     local = %s,
-                    data_local = %s,
-                    data_servidor = %s,
+                    data = %s,
+                    ultima_atualizacao = %s,
                     tipo_movimentacao = %s
                 WHERE id = %s
             """, (
                 dados.get("produto"),
                 dados.get("quantidade"),
                 dados.get("local"),
-                dados.get("data_local"),
+                dados.get("data"),
                 dados.get("ultima_atualizacao"),
                 dados.get("tipo_movimentacao"),
                 existe[0]
@@ -1490,7 +1490,7 @@ def api_salvar_stock():
                     produto,
                     quantidade,
                     local,
-                    data_local,
+                    data,
                     ultima_atualizacao,
                     tipo_movimentacao,
                     empresa_id
