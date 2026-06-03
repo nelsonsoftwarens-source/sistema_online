@@ -1944,6 +1944,7 @@ def proteger_rotas():
 
         # TICKETS
         "api_tickets",
+        "api_salvar_ticket",
 
         # STOCK
         "api_stock",
@@ -1951,7 +1952,8 @@ def proteger_rotas():
 
         # ARMAZENS
         "api_armazens",
-        "api_salvar_armazem",
+        "sincronizar_armazens",
+        "salvar_armazem",
     ]
 
     if request.endpoint in rotas_livres:
