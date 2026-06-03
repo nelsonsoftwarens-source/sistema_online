@@ -1267,7 +1267,7 @@ def stock():
             p.descricao,
             a.local,
             COALESCE(SUM(s.quantidade), 0) AS saldo,
-            MAX(s.data_servidor) AS ultima_atualizacao
+            MAX(s.data) AS ultima_atualizacao
         FROM stock s
         JOIN produtos p ON p.id = s.produto
         JOIN armazem a ON a.id = s.local
@@ -1321,7 +1321,7 @@ def api_stock():
             JOIN produtos p ON p.id = s.produto
             JOIN armazem a ON a.id = s.local
             WHERE s.empresa_id = %s
-            ORDER BY COALESCE(s.data_servidor, s.data) DESC
+            ORDER BY COALESCE(s.data, s.data) DESC
         """, (empresa_id,))
 
         rows = cur.fetchall()
@@ -1366,7 +1366,7 @@ def api_stock_filtrado():
                 p.descricao,
                 a.local,
                 COALESCE(SUM(s.quantidade), 0) AS saldo,
-                MAX(COALESCE(s.data_servidor, s.data_local)) AS ultima_atualizacao
+                MAX(COALESCE(s.ultima_atualizacao, s.data)) AS ultima_atualizacao
             FROM stock s
             JOIN produtos p ON p.id = s.produto
             JOIN armazem a ON a.id = s.local
