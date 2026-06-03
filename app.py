@@ -1420,8 +1420,6 @@ def api_salvar_stock():
         print("================================")
 
         token = dados.get("token")
-        print("EMPRESA:", empresa_id)
-
         empresa = obter_empresa_por_token(token)
 
         if not empresa:
@@ -1430,6 +1428,10 @@ def api_salvar_stock():
             }), 401
 
         empresa_id = empresa[0]
+
+        print("TOKEN:", token)
+        print("EMPRESA:", empresa)
+        print("EMPRESA_ID:", empresa_id)
 
         conn = conectar()
         cur = conn.cursor()
