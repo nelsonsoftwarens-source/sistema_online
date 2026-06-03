@@ -1401,78 +1401,60 @@ def api_stock_filtrado():
 def sincronizar_armazens():
 
     try:
-        dados = request.get_json()
 
-        if not dados:
-            return {"error": "sem dados"}, 400
+        a = request.get_json()
 
         conn = conectar()
         cur = conn.cursor()
 
-        inseridos = 0
-        atualizados = 0
+        uuid_armazem = a.get("uuid")
+        local = a.get("local")
+        empresa_id = a.get("empresa_id")
+        origem = a.get("origem", "PDV")
 
-        for a in dados:
+        cur.execute("""
+            SELECT id
+            FROM armazem
+            WHERE uuid = %s
+        """, (uuid_armazem,))
 
-            uuid = a.get("uuid")
-            local = a.get("local")  # nome do armazém
-            empresa_id = a.get("empresa_id")
-            origem = a.get("origem", "PDV")
+        existe = cur.fetchone()
 
-            if not local:
-                continue
+        if existe:
 
-            # ==========================================
-            # VERIFICAR SE JÁ EXISTE (por UUID ou nome)
-            # ==========================================
             cur.execute("""
-                SELECT id FROM armazem
-                WHERE uuid = %s OR local = %s
-            """, (uuid, local))
+                UPDATE armazem
+                SET local=%s
+                WHERE id=%s
+            """, (
+                local,
+                existe[0]
+            ))
 
-            existe = cur.fetchone()
+        else:
 
-            if existe:
-
-                cur.execute("""
-                    UPDATE armazem
-                    SET local = %s
-                    WHERE id = %s
-                """, (local, existe[0]))
-
-                atualizados += 1
-
-            else:
-
-                cur.execute("""
-                    INSERT INTO armazem (
-                        uuid,
-                        local,
-                        empresa_id,
-                        origem
-                    )
-                    VALUES (%s,%s,%s,%s)
-                """, (
+            cur.execute("""
+                INSERT INTO armazem (
                     uuid,
                     local,
-                    empresa_id,
-                    origem
-                ))
-
-                inseridos += 1
+                    empresa_id
+                )
+                VALUES (%s,%s,%s)
+            """, (
+                uuid_armazem,
+                local,
+                empresa_id
+            ))
 
         conn.commit()
+
         cur.close()
         conn.close()
 
-        return {
-            "status": "ok",
-            "inseridos": inseridos,
-            "atualizados": atualizados
-        }
+        return jsonify({"status": "ok"})
 
     except Exception as e:
-        return {"error": str(e)}, 500
+        return jsonify({"error": str(e)}), 500
 
 @app.route("/api/salvar_armazem", methods=["POST"])
 def salvar_armazem():
@@ -1919,26 +1901,19 @@ def proteger_rotas():
         "login",
         "static",
 
-        # PRODUTOS
         "api_produtos",
         "api_salvar_produto",
 
-        # VENDAS
-        "api_vendas",
-        "api_salvar_venda",
+        "api_armazens",
+        "salvar_armazem",
+        "sincronizar_armazens",
 
-        # TICKETS
-        "api_tickets",
-        "api_salvar_ticket",
-
-        # STOCK
         "api_stock",
         "api_salvar_stock",
 
-        # ARMAZENS
-        "api_armazens",
-        "sincronizar_armazens",
-        "salvar_armazem",
+        "api_tickets",
+        "api_vendas",
+        "api_salvar_venda",
     ]
 
     if request.endpoint in rotas_livres:
