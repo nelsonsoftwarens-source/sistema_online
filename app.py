@@ -1407,6 +1407,109 @@ def api_stock_filtrado():
 
     except Exception as e:
         return {"error": str(e)}, 500
+
+@app.route("/api/salvar_stock", methods=["POST"])
+def api_salvar_stock():
+
+    try:
+
+        dados = request.json
+
+        token = dados.get("token")
+
+        empresa = obter_empresa_por_token(token)
+
+        if not empresa:
+            return jsonify({
+                "erro": "TOKEN INVALIDO"
+            }), 401
+
+        empresa_id = empresa[0]
+
+        conn = conectar()
+        cur = conn.cursor()
+
+        uuid_stock = dados.get("uuid")
+
+        # =====================================
+        # VERIFICAR SE EXISTE
+        # =====================================
+
+        cur.execute("""
+            SELECT id
+            FROM stock
+            WHERE uuid = %s
+              AND empresa_id = %s
+        """, (
+            uuid_stock,
+            empresa_id
+        ))
+
+        existe = cur.fetchone()
+
+        if existe:
+
+            cur.execute("""
+                UPDATE stock
+                SET
+                    produto = %s,
+                    quantidade = %s,
+                    local = %s,
+                    data = %s,
+                    ultima_atualizacao = %s,
+                    tipo_movimentacao = %s
+                WHERE id = %s
+            """, (
+                dados.get("produto"),
+                dados.get("quantidade"),
+                dados.get("local"),
+                dados.get("data"),
+                dados.get("ultima_atualizacao"),
+                dados.get("tipo_movimentacao"),
+                existe[0]
+            ))
+
+        else:
+
+            cur.execute("""
+                INSERT INTO stock (
+                    uuid,
+                    produto,
+                    quantidade,
+                    local,
+                    data,
+                    ultima_atualizacao,
+                    tipo_movimentacao,
+                    empresa_id
+                )
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+            """, (
+                uuid_stock,
+                dados.get("produto"),
+                dados.get("quantidade"),
+                dados.get("local"),
+                dados.get("data"),
+                dados.get("ultima_atualizacao"),
+                dados.get("tipo_movimentacao"),
+                empresa_id
+            ))
+
+        conn.commit()
+
+        cur.close()
+        conn.close()
+
+        return jsonify({
+            "status": "ok"
+        })
+
+    except Exception as e:
+
+        print("ERRO SALVAR STOCK:", e)
+
+        return jsonify({
+            "error": str(e)
+        }), 500
     
 @app.route("/api/sincronizar_armazens", methods=["POST"])
 def sincronizar_armazens():
