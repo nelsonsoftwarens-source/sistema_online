@@ -2140,7 +2140,7 @@ def proteger_rotas():
         "static",
 
         "api_produtos",
-        "api_salvar_produto",
+        "salvar_produto",
 
         "api_armazens",
         "salvar_armazem",
