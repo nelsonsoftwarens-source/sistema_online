@@ -219,6 +219,8 @@ def salvar_produto():
     try:
 
         dados = request.json
+        print("DADOS:", dados)
+        print("UUID:", dados.get("uuid"))
 
         token = dados.get("token")
 
