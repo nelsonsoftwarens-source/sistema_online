@@ -11,13 +11,28 @@
 
         <h2>📦 Stock</h2>
 
-        <!-- FILTRO GLOBAL -->
+        <!-- PRODUTO -->
         <input type="text"
-               id="filtro-global"
-               placeholder="🔎 Pesquisar produto ou armazém..."
+               id="filtro-produto"
+               placeholder="🔎 Procurar produto..."
                class="campo-busca">
 
-        <!-- DATA -->
+        <!-- ARMAZÉM -->
+        <select id="filtro-armazem" class="campo-busca">
+
+            <option value="">
+                Todos os Armazéns
+            </option>
+
+            {% for a in armazens %}
+            <option value="{{ a[0]|lower }}">
+                {{ a[0] }}
+            </option>
+            {% endfor %}
+
+        </select>
+
+        <!-- DATAS -->
         <div style="display:flex; gap:10px; margin-top:10px;">
 
             <input type="date" id="data-inicio">
@@ -52,8 +67,8 @@
                 {% for s in stock %}
 
                 <tr class="linha-stock"
-                    data-produto="{{ s[1] }}"
-                    data-armazem="{{ s[2] }}"
+                    data-produto="{{ s[1]|lower }}"
+                    data-armazem="{{ s[2]|lower }}"
                     data-data="{{ s[4] }}">
 
                     <td>{{ s[1] }}</td>
@@ -77,44 +92,81 @@
 
 function filtrarStock(){
 
-    let texto = document.getElementById("filtro-global").value.toLowerCase();
-    let dataInicio = document.getElementById("data-inicio").value;
-    let dataFim = document.getElementById("data-fim").value;
+    let produto =
+        document.getElementById("filtro-produto")
+        .value
+        .toLowerCase();
 
-    let linhas = document.querySelectorAll(".linha-stock");
+    let armazem =
+        document.getElementById("filtro-armazem")
+        .value
+        .toLowerCase();
+
+    let dataInicio =
+        document.getElementById("data-inicio").value;
+
+    let dataFim =
+        document.getElementById("data-fim").value;
+
+    let linhas =
+        document.querySelectorAll(".linha-stock");
 
     linhas.forEach(l => {
 
-        let produto = l.dataset.produto.toLowerCase();
-        let armazem = l.dataset.armazem.toLowerCase();
-        let data = l.dataset.data;
+        let p = l.dataset.produto;
+        let a = l.dataset.armazem;
+        let d = l.dataset.data;
 
-        // FILTRO TEXTO GLOBAL
-        let okTexto =
-            produto.includes(texto) ||
-            armazem.includes(texto);
+        let okProduto = p.includes(produto);
 
-        // FILTRO DATA
+        let okArmazem =
+            armazem === "" ||
+            a === armazem;
+
         let okData = true;
 
-        if (dataInicio && data < dataInicio) okData = false;
-        if (dataFim && data > dataFim) okData = false;
+        if(dataInicio && d){
+            if(d.substring(0,10) < dataInicio){
+                okData = false;
+            }
+        }
 
-        if (okTexto && okData){
+        if(dataFim && d){
+            if(d.substring(0,10) > dataFim){
+                okData = false;
+            }
+        }
+
+        if(okProduto && okArmazem && okData){
             l.style.display = "";
-        } else {
+        }else{
             l.style.display = "none";
         }
+
     });
+
 }
 
-document.getElementById("filtro-global").addEventListener("input", filtrarStock);
-document.getElementById("data-inicio").addEventListener("change", filtrarStock);
-document.getElementById("data-fim").addEventListener("change", filtrarStock);
+document
+.getElementById("filtro-produto")
+.addEventListener("input", filtrarStock);
+
+document
+.getElementById("filtro-armazem")
+.addEventListener("change", filtrarStock);
+
+document
+.getElementById("data-inicio")
+.addEventListener("change", filtrarStock);
+
+document
+.getElementById("data-fim")
+.addEventListener("change", filtrarStock);
 
 function limparFiltros(){
 
-    document.getElementById("filtro-global").value = "";
+    document.getElementById("filtro-produto").value = "";
+    document.getElementById("filtro-armazem").value = "";
     document.getElementById("data-inicio").value = "";
     document.getElementById("data-fim").value = "";
 

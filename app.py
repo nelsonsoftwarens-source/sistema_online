@@ -126,11 +126,12 @@ def verificar_login():
 # ======================================================
 @app.route("/api/produtos")
 def api_produtos():
+
     token = request.args.get("token")
+
     conn = conectar()
     cur = conn.cursor()
 
-    # validar login
     cur.execute("""
         SELECT empresa_id
         FROM logins_empresa
@@ -139,38 +140,42 @@ def api_produtos():
 
     row = cur.fetchone()
 
-    print("LOGIN ENCONTRADO:", row)
-
     if not row:
         return jsonify({"erro": "TOKEN INVALIDO"}), 401
 
     empresa_id = row[0]
 
-    # buscar produtos dessa empresa
     cur.execute("""
-        SELECT descricao, preco_venda, preco_compra, categoria, barcode, ativo
+        SELECT
+            uuid,
+            descricao,
+            preco_venda,
+            preco_compra,
+            categoria,
+            barcode,
+            ativo
         FROM produtos
         WHERE empresa_id = %s
     """, (empresa_id,))
+
     produtos = cur.fetchall()
 
     cur.close()
     conn.close()
 
-    # converter para JSON
-    resultado = [
+    return jsonify([
         {
-            "descricao": p[0],
-            "preco_venda": p[1],
-            "preco_compra": p[2],
-            "categoria": p[3],
-            "barcode": p[4],
-            "ativo": p[5]
+            "uuid": p[0],
+            "descricao": p[1],
+            "preco_venda": float(p[2] or 0),
+            "preco_compra": float(p[3] or 0),
+            "categoria": p[4],
+            "barcode": p[5],
+            "ativo": p[6]
         }
         for p in produtos
-    ]
+    ])
 
-    return jsonify(resultado)
 
 @app.route("/produtos")
 def produtos():
@@ -211,69 +216,101 @@ def produtos():
 @app.route("/api/salvar_produto", methods=["POST"])
 def salvar_produto():
 
-    dados = request.json
+    try:
 
-    token = dados.get("token")
+        dados = request.json
 
-    empresa = obter_empresa_por_token(token)
+        token = dados.get("token")
 
-    if not empresa:
-        return jsonify({
-            "erro": "TOKEN INVALIDO"
-        }), 401
+        empresa = obter_empresa_por_token(token)
 
-    empresa_id = empresa[0]
+        if not empresa:
+            return jsonify({
+                "erro": "TOKEN INVALIDO"
+            }), 401
 
-    conn = conectar()
-    cur = conn.cursor()
+        empresa_id = empresa[0]
 
-    # =====================================
-    # VERIFICA BARCODE
-    # =====================================
+        conn = conectar()
+        cur = conn.cursor()
 
-    cur.execute("""
-        SELECT id
-        FROM produtos
-        WHERE barcode = %s
-        AND empresa_id = %s
-    """, (
-        dados.get("barcode"),
-        empresa_id
-    ))
-
-    existe = cur.fetchone()
-
-    if not existe:
+        uuid_produto = dados.get("uuid")
 
         cur.execute("""
-            INSERT INTO produtos (
-                empresa_id,
-                descricao,
-                preco_venda,
-                preco_compra,
-                categoria,
-                barcode,
-                ativo
-            )
-            VALUES (%s,%s,%s,%s,%s,%s,%s)
+            SELECT id
+            FROM produtos
+            WHERE uuid = %s
+              AND empresa_id = %s
         """, (
-            empresa_id,
-            dados.get("descricao"),
-            dados.get("preco_venda"),
-            dados.get("preco_compra"),
-            dados.get("categoria"),
-            dados.get("barcode"),
-            dados.get("ativo")
+            uuid_produto,
+            empresa_id
         ))
+
+        existe = cur.fetchone()
+
+        if existe:
+
+            cur.execute("""
+                UPDATE produtos
+                SET
+                    descricao=%s,
+                    preco_venda=%s,
+                    preco_compra=%s,
+                    categoria=%s,
+                    barcode=%s,
+                    ativo=%s
+                WHERE id=%s
+            """, (
+                dados.get("descricao"),
+                dados.get("preco_venda"),
+                dados.get("preco_compra"),
+                dados.get("categoria"),
+                dados.get("barcode"),
+                dados.get("ativo"),
+                existe[0]
+            ))
+
+        else:
+
+            cur.execute("""
+                INSERT INTO produtos (
+                    uuid,
+                    empresa_id,
+                    descricao,
+                    preco_venda,
+                    preco_compra,
+                    categoria,
+                    barcode,
+                    ativo
+                )
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+            """, (
+                uuid_produto,
+                empresa_id,
+                dados.get("descricao"),
+                dados.get("preco_venda"),
+                dados.get("preco_compra"),
+                dados.get("categoria"),
+                dados.get("barcode"),
+                dados.get("ativo")
+            ))
 
         conn.commit()
 
-    cur.close()
-    conn.close()
+        cur.close()
+        conn.close()
 
-    return jsonify({
-        "status": "ok"
-    })
+        return jsonify({
+            "status": "ok"
+        })
+
+    except Exception as e:
+
+        print("ERRO PRODUTO:", e)
+
+        return jsonify({
+            "error": str(e)
+        }), 500
 
 @app.route("/salvar_produto", methods=["POST"])
 def salvar_produto_html():
@@ -1266,22 +1303,36 @@ def stock():
             p.id,
             p.descricao,
             a.local,
-            COALESCE(SUM(s.quantidade), 0) AS saldo,
+            COALESCE(SUM(s.quantidade),0) AS saldo,
             MAX(s.data) AS ultima_atualizacao
         FROM stock s
         JOIN produtos p ON p.id = s.produto
         JOIN armazem a ON a.id = s.local
         WHERE s.empresa_id = %s
-        GROUP BY p.id, p.descricao, a.local
+        GROUP BY p.id,p.descricao,a.local
         ORDER BY p.descricao
     """, (empresa_id,))
 
     stock = cur.fetchall()
 
+    cur.execute("""
+        SELECT local
+        FROM armazem
+        WHERE empresa_id = %s
+        ORDER BY local
+    """, (empresa_id,))
+
+    armazens = cur.fetchall()
+
     cur.close()
     conn.close()
 
-    return render_template("stock.html", stock=stock)
+    return render_template(
+        "stock.html",
+        stock=stock,
+        armazens=armazens
+    )
+
 
 @app.route("/api/stock", methods=["GET"])
 def api_stock():
