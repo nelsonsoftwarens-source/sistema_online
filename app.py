@@ -1507,6 +1507,36 @@ def api_salvar_stock():
         cur = conn.cursor()
 
         uuid_stock = dados.get("uuid")
+        produto_uuid = dados.get("produto_uuid")
+
+        # =====================================
+        # BUSCAR ID DO PRODUTO PELO UUID
+        # =====================================
+
+        produto_id = None
+
+        if produto_uuid:
+
+            cur.execute("""
+                SELECT id
+                FROM produtos
+                WHERE uuid = %s
+            """, (produto_uuid,))
+
+            resultado = cur.fetchone()
+
+            if resultado:
+                produto_id = resultado[0]
+
+        if not produto_id:
+
+            return jsonify({
+                "error": f"Produto não encontrado para UUID: {produto_uuid}"
+            }), 400
+
+        # =====================================
+        # VERIFICAR SE JÁ EXISTE
+        # =====================================
 
         cur.execute("""
             SELECT id
@@ -1525,6 +1555,7 @@ def api_salvar_stock():
             cur.execute("""
                 UPDATE stock
                 SET
+                    produto = %s,
                     produto_uuid = %s,
                     quantidade = %s,
                     local = %s,
@@ -1533,7 +1564,8 @@ def api_salvar_stock():
                     tipo_movimentacao = %s
                 WHERE id = %s
             """, (
-                dados.get("produto_uuid"),
+                produto_id,
+                produto_uuid,
                 dados.get("quantidade"),
                 dados.get("local"),
                 dados.get("data"),
@@ -1548,6 +1580,7 @@ def api_salvar_stock():
                 INSERT INTO stock
                 (
                     uuid,
+                    produto,
                     produto_uuid,
                     quantidade,
                     local,
@@ -1558,11 +1591,12 @@ def api_salvar_stock():
                 )
                 VALUES
                 (
-                    %s,%s,%s,%s,%s,%s,%s,%s
+                    %s,%s,%s,%s,%s,%s,%s,%s,%s
                 )
             """, (
                 uuid_stock,
-                dados.get("produto_uuid"),
+                produto_id,
+                produto_uuid,
                 dados.get("quantidade"),
                 dados.get("local"),
                 dados.get("data"),
