@@ -1305,19 +1305,17 @@ def stock():
         SELECT
             p.id,
             p.descricao,
-            a.local,
+            s.local,
             COALESCE(SUM(s.quantidade),0) AS saldo,
             MAX(s.data) AS ultima_atualizacao
         FROM stock s
         JOIN produtos p
             ON p.uuid = s.produto_uuid
-        JOIN armazem a
-            ON a.id = s.local
         WHERE s.empresa_id = %s
         GROUP BY
             p.id,
             p.descricao,
-            a.local
+            s.local
         ORDER BY p.descricao
     """, (empresa_id,))
 
@@ -1340,7 +1338,6 @@ def stock():
         stock=stock,
         armazens=armazens
     )
-
 
 @app.route("/api/stock", methods=["GET"])
 def api_stock():
@@ -1365,9 +1362,9 @@ def api_stock():
         cur.execute("""
             SELECT
                 s.id,
-                s.produto_uuid,
+                p.uuid,
                 p.descricao,
-                a.local,
+                s.local,
                 s.quantidade,
                 s.data,
                 s.ultima_atualizacao,
@@ -1377,15 +1374,10 @@ def api_stock():
                 s.origem,
                 s.empresa_id
             FROM stock s
-            LEFT JOIN produtos p
+            JOIN produtos p
                 ON p.uuid = s.produto_uuid
-            LEFT JOIN armazem a
-                ON a.id = s.local
             WHERE s.empresa_id = %s
-            ORDER BY COALESCE(
-                s.ultima_atualizacao,
-                s.data
-            ) DESC
+            ORDER BY s.data DESC
         """, (empresa_id,))
 
         rows = cur.fetchall()
