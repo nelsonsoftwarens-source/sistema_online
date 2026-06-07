@@ -1289,6 +1289,7 @@ def painel():
         total_vendas=total_vendas,
         vendas_por_usuario=vendas_por_usuario
     )
+
 @app.route("/stock")
 def stock():
 
@@ -1308,10 +1309,15 @@ def stock():
             COALESCE(SUM(s.quantidade),0) AS saldo,
             MAX(s.data) AS ultima_atualizacao
         FROM stock s
-        JOIN produtos p ON p.id = s.produto
-        JOIN armazem a ON a.id = s.local
+        JOIN produtos p
+            ON p.uuid = s.produto_uuid
+        JOIN armazem a
+            ON a.id = s.local
         WHERE s.empresa_id = %s
-        GROUP BY p.id,p.descricao,a.local
+        GROUP BY
+            p.id,
+            p.descricao,
+            a.local
         ORDER BY p.descricao
     """, (empresa_id,))
 
@@ -1359,7 +1365,7 @@ def api_stock():
         cur.execute("""
             SELECT
                 s.id,
-                p.id,
+                s.produto_uuid,
                 p.descricao,
                 a.local,
                 s.quantidade,
@@ -1371,10 +1377,15 @@ def api_stock():
                 s.origem,
                 s.empresa_id
             FROM stock s
-            JOIN produtos p ON p.id = s.produto
-            JOIN armazem a ON a.id = s.local
+            LEFT JOIN produtos p
+                ON p.uuid = s.produto_uuid
+            LEFT JOIN armazem a
+                ON a.id = s.local
             WHERE s.empresa_id = %s
-            ORDER BY COALESCE(s.data, s.data) DESC
+            ORDER BY COALESCE(
+                s.ultima_atualizacao,
+                s.data
+            ) DESC
         """, (empresa_id,))
 
         rows = cur.fetchall()
@@ -1385,14 +1396,14 @@ def api_stock():
         return jsonify([
             {
                 "id": r[0],
-                "produto_id": r[1],
+                "produto_uuid": r[1],
                 "produto": r[2],
                 "armazem": r[3],
                 "quantidade": float(r[4]),
                 "data": str(r[5]) if r[5] else None,
                 "ultima_atualizacao": str(r[6]) if r[6] else None,
                 "uuid": r[7],
-                "tipo": r[8],
+                "tipo_movimentacao": r[8],
                 "sincronizado": r[9],
                 "origem": r[10],
                 "empresa_id": r[11]
@@ -1418,26 +1429,39 @@ def api_stock_filtrado():
             SELECT
                 p.descricao,
                 a.local,
-                COALESCE(SUM(s.quantidade), 0) AS saldo,
-                MAX(COALESCE(s.ultima_atualizacao, s.data)) AS ultima_atualizacao
+                COALESCE(SUM(s.quantidade),0) AS saldo,
+                MAX(
+                    COALESCE(
+                        s.ultima_atualizacao,
+                        s.data
+                    )
+                ) AS ultima_atualizacao
             FROM stock s
-            JOIN produtos p ON p.id = s.produto
-            JOIN armazem a ON a.id = s.local
+            JOIN produtos p
+                ON p.uuid = s.produto_uuid
+            JOIN armazem a
+                ON a.id = s.local
             WHERE 1=1
         """
 
         params = []
 
         if produto:
-            sql += " AND p.descricao ILIKE %s"
+            sql += """
+                AND p.descricao ILIKE %s
+            """
             params.append(f"%{produto}%")
 
         if armazem:
-            sql += " AND a.local ILIKE %s"
+            sql += """
+                AND a.local ILIKE %s
+            """
             params.append(f"%{armazem}%")
 
         sql += """
-            GROUP BY p.descricao, a.local
+            GROUP BY
+                p.descricao,
+                a.local
             ORDER BY p.descricao
         """
 
@@ -1467,12 +1491,9 @@ def api_salvar_stock():
     try:
 
         dados = request.json
-        print("================================")
-        print("DADOS RECEBIDOS:")
-        print(dados)
-        print("================================")
 
         token = dados.get("token")
+
         empresa = obter_empresa_por_token(token)
 
         if not empresa:
@@ -1482,18 +1503,10 @@ def api_salvar_stock():
 
         empresa_id = empresa[0]
 
-        print("TOKEN:", token)
-        print("EMPRESA:", empresa)
-        print("EMPRESA_ID:", empresa_id)
-
         conn = conectar()
         cur = conn.cursor()
 
         uuid_stock = dados.get("uuid")
-
-        # =====================================
-        # VERIFICAR SE EXISTE
-        # =====================================
 
         cur.execute("""
             SELECT id
@@ -1512,7 +1525,7 @@ def api_salvar_stock():
             cur.execute("""
                 UPDATE stock
                 SET
-                    produto = %s,
+                    produto_uuid = %s,
                     quantidade = %s,
                     local = %s,
                     data = %s,
@@ -1520,7 +1533,7 @@ def api_salvar_stock():
                     tipo_movimentacao = %s
                 WHERE id = %s
             """, (
-                dados.get("produto"),
+                dados.get("produto_uuid"),
                 dados.get("quantidade"),
                 dados.get("local"),
                 dados.get("data"),
@@ -1530,17 +1543,12 @@ def api_salvar_stock():
             ))
 
         else:
-            print(
-                dados.get("uuid"),
-                dados.get("produto"),
-                dados.get("local"),
-                dados.get("quantidade")
-            )
 
             cur.execute("""
-                INSERT INTO stock (
+                INSERT INTO stock
+                (
                     uuid,
-                    produto,
+                    produto_uuid,
                     quantidade,
                     local,
                     data,
@@ -1548,10 +1556,13 @@ def api_salvar_stock():
                     tipo_movimentacao,
                     empresa_id
                 )
-                VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+                VALUES
+                (
+                    %s,%s,%s,%s,%s,%s,%s,%s
+                )
             """, (
                 uuid_stock,
-                dados.get("produto"),
+                dados.get("produto_uuid"),
                 dados.get("quantidade"),
                 dados.get("local"),
                 dados.get("data"),
