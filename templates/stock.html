@@ -2,175 +2,264 @@
 
 {% block conteudo %}
 
+<style>
+
+.stock-layout{
+    display:flex;
+    gap:20px;
+    padding:20px;
+}
+
+/* ===================== FILTROS ===================== */
+.stock-filtros{
+    width:260px;
+    background:#fff;
+    padding:15px;
+    border-radius:10px;
+    box-shadow:0 2px 10px rgba(0,0,0,0.08);
+}
+
+.campo-busca{
+    width:100%;
+    padding:10px;
+    margin-top:10px;
+    border:1px solid #ddd;
+    border-radius:6px;
+}
+
+/* ===================== TRANSFERÊNCIA ===================== */
+.stock-transferencia{
+    width:300px;
+    background:#fff;
+    padding:15px;
+    border-radius:10px;
+    box-shadow:0 2px 10px rgba(0,0,0,0.08);
+}
+
+.stock-transferencia input,
+.stock-transferencia select{
+    width:100%;
+    padding:14px;
+    margin-top:10px;
+    border:1px solid #ccc;
+    border-radius:8px;
+    font-size:15px;
+}
+
+.btn-transferir{
+    width:100%;
+    padding:16px;
+    margin-top:15px;
+    background:#28a745;
+    color:#fff;
+    font-size:16px;
+    border:none;
+    border-radius:8px;
+    cursor:pointer;
+    font-weight:bold;
+}
+
+.btn-transferir:hover{
+    background:#218838;
+}
+
+/* ===================== TABELA ===================== */
+.stock-tabela{
+    flex:1;
+    background:#fff;
+    padding:15px;
+    border-radius:10px;
+    box-shadow:0 2px 10px rgba(0,0,0,0.08);
+    overflow:auto;
+}
+
+table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+th, td{
+    padding:10px;
+    border-bottom:1px solid #eee;
+}
+
+tr:hover{
+    background:#f5f5f5;
+    cursor:pointer;
+}
+
+.selecionado{
+    background:#d1ecf1 !important;
+}
+
+</style>
+
 <div class="stock-layout">
 
-    <!-- ========================= -->
-    <!-- FILTROS -->
-    <!-- ========================= -->
+    <!-- ================= FILTROS ================= -->
     <div class="stock-filtros">
 
         <h2>📦 Stock</h2>
 
-        <!-- PRODUTO -->
-        <input type="text"
-               id="filtro-produto"
-               placeholder="🔎 Procurar produto..."
-               class="campo-busca">
+        <input type="text" id="filtro-produto" class="campo-busca" placeholder="🔎 Produto">
 
-        <!-- ARMAZÉM -->
         <select id="filtro-armazem" class="campo-busca">
-
-            <option value="">
-                Todos os Armazéns
-            </option>
-
+            <option value="">Todos os Armazéns</option>
             {% for a in armazens %}
-            <option value="{{ a[0]|lower }}">
-                {{ a[0] }}
-            </option>
+                <option value="{{ a[0]|lower }}">{{ a[0] }}</option>
             {% endfor %}
-
         </select>
 
-        <!-- DATAS -->
-        <div style="display:flex; gap:10px; margin-top:10px;">
+    </div>
 
-            <input type="date" id="data-inicio">
-            <input type="date" id="data-fim">
+    <!-- ================= TRANSFERÊNCIA ================= -->
+    <div class="stock-transferencia">
 
-        </div>
+        <h3>🔄 Transferência</h3>
 
-        <button onclick="limparFiltros()">
-            🔄 Limpar
+        <!-- aqui fica o UUID escondido -->
+        <input type="hidden" id="produto-uuid">
+
+        <input type="text" id="produto-transfer" placeholder="Clique na tabela para selecionar" readonly>
+
+        <input type="number" id="qtd-transfer" placeholder="Quantidade" min="1">
+
+        <select id="armazem-origem">
+            {% for a in armazens %}
+                <option value="{{ a[0] }}">{{ a[0] }}</option>
+            {% endfor %}
+        </select>
+
+        <select id="armazem-destino">
+            {% for a in armazens %}
+                <option value="{{ a[0] }}">{{ a[0] }}</option>
+            {% endfor %}
+        </select>
+
+        <button class="btn-transferir" onclick="transferirStock()">
+            🚚 Transferir Stock
         </button>
 
     </div>
 
-    <!-- ========================= -->
-    <!-- TABELA -->
-    <!-- ========================= -->
-    <div class="stock-tabela">
+    <!-- ================= TABELA ================= -->
+<div class="stock-tabela">
 
-        <table>
+    <table>
 
-            <thead>
-                <tr>
-                    <th>Produto</th>
-                    <th>Armazém</th>
-                    <th>Qtd</th>
-                    <th>Última Atualização</th>
-                </tr>
-            </thead>
+        <thead>
+            <tr>
+                <th>Produto</th>
+                <th>Armazém</th>
+                <th>Qtd</th>
+                <th>Última Atualização</th>
+            </tr>
+        </thead>
 
-            <tbody id="tbody-stock">
+        <tbody>
 
-                {% for s in stock %}
+            {% for s in stock %}
 
-                <tr class="linha-stock"
-                    data-produto="{{ s[1]|lower }}"
-                    data-armazem="{{ s[2]|lower }}"
-                    data-data="{{ s[4] }}">
+            <tr class="linha-stock"
+                data-uuid="{{ s[0] }}"
+                data-nome="{{ s[1]|lower }}"
+                data-armazem="{{ s[2]|lower }}"
+                onclick="selecionarProduto(this)">
 
-                    <td>{{ s[1] }}</td>
-                    <td>{{ s[2] }}</td>
-                    <td>{{ s[3] }}</td>
-                    <td>{{ s[4] }}</td>
+                <td>{{ s[1] }}</td>
+                <td>{{ s[2] }}</td>
+                <td>{{ s[3] }}</td>
+                <td>{{ s[4] }}</td>
 
-                </tr>
+            </tr>
 
-                {% endfor %}
+            {% endfor %}
 
-            </tbody>
+        </tbody>
 
-        </table>
-
-    </div>
+    </table>
 
 </div>
 
 <script>
 
-function filtrarStock(){
+let produtoUUIDSelecionado = null;
 
-    let produto =
-        document.getElementById("filtro-produto")
-        .value
-        .toLowerCase();
+/* ================= SELEÇÃO DO PRODUTO ================= */
+function selecionarProduto(linha){
 
-    let armazem =
-        document.getElementById("filtro-armazem")
-        .value
-        .toLowerCase();
-
-    let dataInicio =
-        document.getElementById("data-inicio").value;
-
-    let dataFim =
-        document.getElementById("data-fim").value;
-
-    let linhas =
-        document.querySelectorAll(".linha-stock");
-
-    linhas.forEach(l => {
-
-        let p = l.dataset.produto;
-        let a = l.dataset.armazem;
-        let d = l.dataset.data;
-
-        let okProduto = p.includes(produto);
-
-        let okArmazem =
-            armazem === "" ||
-            a === armazem;
-
-        let okData = true;
-
-        if(dataInicio && d){
-            if(d.substring(0,10) < dataInicio){
-                okData = false;
-            }
-        }
-
-        if(dataFim && d){
-            if(d.substring(0,10) > dataFim){
-                okData = false;
-            }
-        }
-
-        if(okProduto && okArmazem && okData){
-            l.style.display = "";
-        }else{
-            l.style.display = "none";
-        }
-
+    // remove seleção anterior (opcional)
+    document.querySelectorAll(".linha-stock").forEach(l => {
+        l.classList.remove("selecionado");
     });
 
+    linha.classList.add("selecionado");
+
+    // nome do produto (para visual)
+    document.getElementById("produto-transfer").value =
+        linha.dataset.nome;
+
+    // UUID REAL (CORRETO)
+    produtoUUIDSelecionado = linha.dataset.uuid;
+
+    document.getElementById("produto-uuid").value =
+        produtoUUIDSelecionado;
 }
 
-document
-.getElementById("filtro-produto")
-.addEventListener("input", filtrarStock);
+/* ================= TRANSFERÊNCIA ================= */
+function transferirStock(){
 
-document
-.getElementById("filtro-armazem")
-.addEventListener("change", filtrarStock);
+    let uuid = produtoUUIDSelecionado;
+    let qtd = document.getElementById("qtd-transfer").value;
+    let origem = document.getElementById("armazem-origem").value;
+    let destino = document.getElementById("armazem-destino").value;
 
-document
-.getElementById("data-inicio")
-.addEventListener("change", filtrarStock);
+    if(!uuid){
+        alert("Selecione um produto na tabela!");
+        return;
+    }
 
-document
-.getElementById("data-fim")
-.addEventListener("change", filtrarStock);
+    if(!qtd || qtd <= 0){
+        alert("Quantidade inválida!");
+        return;
+    }
 
-function limparFiltros(){
+    if(!origem || !destino){
+        alert("Selecione armazéns!");
+        return;
+    }
 
-    document.getElementById("filtro-produto").value = "";
-    document.getElementById("filtro-armazem").value = "";
-    document.getElementById("data-inicio").value = "";
-    document.getElementById("data-fim").value = "";
+    if(origem === destino){
+        alert("Origem e destino não podem ser iguais!");
+        return;
+    }
 
-    filtrarStock();
+    fetch("/api/transferir_stock", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+            produto_uuid: uuid,
+            quantidade: Number(qtd),
+            origem: origem,
+            destino: destino
+        })
+    })
+    .then(r => r.json())
+    .then(data => {
+
+        if(data.status === "ok"){
+            alert("Transferência realizada com sucesso!");
+            location.reload();
+        } else {
+            alert(data.error || "Erro na transferência");
+        }
+
+    })
+    .catch(err => {
+        console.error(err);
+        alert("Erro de comunicação com o servidor");
+    });
+
 }
 
 </script>

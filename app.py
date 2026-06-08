@@ -1303,7 +1303,7 @@ def stock():
 
     cur.execute("""
         SELECT
-            p.id,
+            p.uuid,                          -- ✔ CORRETO (ANTES ERA p.id)
             p.descricao,
             s.local,
             COALESCE(SUM(s.quantidade),0) AS saldo,
@@ -1313,7 +1313,7 @@ def stock():
             ON p.uuid = s.produto_uuid
         WHERE s.empresa_id = %s
         GROUP BY
-            p.id,
+            p.uuid,
             p.descricao,
             s.local
         ORDER BY p.descricao
@@ -1613,7 +1613,177 @@ def api_salvar_stock():
         return jsonify({
             "error": str(e)
         }), 500
-    
+
+from decimal import Decimal
+import uuid
+from flask import request, jsonify
+@app.route("/api/transferir_stock", methods=["POST"])
+def transferir_stock():
+
+    try:
+        dados = request.json
+
+        print("\n========== DEBUG TRANSFER ==========")
+        print("DADOS:", dados)
+
+        produto_uuid = dados.get("produto_uuid")
+        origem = dados.get("origem")
+        destino = dados.get("destino")
+        empresa_id = session.get("empresa_id")
+
+        # =============================
+        # VALIDAÇÕES
+        # =============================
+        if not empresa_id:
+            return jsonify({"error": "empresa_id em falta"}), 401
+
+        if not produto_uuid:
+            return jsonify({"error": "produto_uuid inválido"}), 400
+
+        try:
+            qtd = Decimal(str(dados.get("quantidade")))
+        except Exception:
+            return jsonify({"error": "Quantidade inválida"}), 400
+
+        if qtd <= 0:
+            return jsonify({"error": "Quantidade deve ser maior que zero"}), 400
+
+        if origem == destino:
+            return jsonify({"error": "Origem e destino não podem ser iguais"}), 400
+
+        conn = conectar()
+        cur = conn.cursor()
+
+        # =============================
+        # VALIDAR PRODUTO
+        # =============================
+        cur.execute("""
+            SELECT id, uuid, descricao
+            FROM produtos
+            WHERE uuid = %s
+              AND empresa_id = %s
+        """, (produto_uuid, empresa_id))
+
+        produto = cur.fetchone()
+
+        if not produto:
+            cur.close()
+            conn.close()
+
+            return jsonify({
+                "error": f"Produto não encontrado: {produto_uuid}"
+            }), 400
+
+        produto_id, produto_uuid_db, produto_nome = produto
+
+        print("✔ Produto encontrado:", produto_nome)
+        print("✔ Produto ID:", produto_id)
+
+        # =============================
+        # SAÍDA DO ARMAZÉM ORIGEM
+        # =============================
+        cur.execute("""
+            INSERT INTO stock (
+                produto,
+                produto_uuid,
+                quantidade,
+                local,
+                data,
+                tipo_movimentacao,
+                uuid,
+                ultima_atualizacao,
+                empresa_id
+            )
+            VALUES (
+                %s,
+                %s,
+                %s,
+                %s,
+                NOW(),
+                %s,
+                %s,
+                NOW(),
+                %s
+            )
+        """, (
+            produto_id,
+            produto_uuid,
+            -qtd,
+            origem,
+            "transferencia_saida",
+            str(uuid.uuid4()),
+            empresa_id
+        ))
+
+        # =============================
+        # ENTRADA NO ARMAZÉM DESTINO
+        # =============================
+        cur.execute("""
+            INSERT INTO stock (
+                produto,
+                produto_uuid,
+                quantidade,
+                local,
+                data,
+                tipo_movimentacao,
+                uuid,
+                ultima_atualizacao,
+                empresa_id
+            )
+            VALUES (
+                %s,
+                %s,
+                %s,
+                %s,
+                NOW(),
+                %s,
+                %s,
+                NOW(),
+                %s
+            )
+        """, (
+            produto_id,
+            produto_uuid,
+            qtd,
+            destino,
+            "transferencia_entrada",
+            str(uuid.uuid4()),
+            empresa_id
+        ))
+
+        conn.commit()
+
+        cur.close()
+        conn.close()
+
+        print("✔ TRANSFERÊNCIA OK")
+
+        return jsonify({
+            "status": "ok",
+            "produto_id": produto_id,
+            "produto": produto_nome,
+            "quantidade": float(qtd),
+            "origem": origem,
+            "destino": destino
+        })
+
+    except Exception as e:
+
+        print("❌ ERRO TRANSFERÊNCIA:", e)
+
+        try:
+            conn.rollback()
+        except:
+            pass
+
+        try:
+            cur.close()
+            conn.close()
+        except:
+            pass
+
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/api/sincronizar_armazens", methods=["POST"])
 def sincronizar_armazens():
 
@@ -1634,6 +1804,12 @@ def sincronizar_armazens():
 
         uuid_armazem = dados.get("uuid")
         local = dados.get("local")
+        origem = dados.get("origem", "PDV")
+
+        if not uuid_armazem:
+            return jsonify({
+                "error": "uuid obrigatorio"
+            }), 400
 
         if not local:
             return jsonify({
@@ -1644,76 +1820,68 @@ def sincronizar_armazens():
         cur = conn.cursor()
 
         # ==========================================
-        # PROCURA POR UUID
+        # PROCURA UUID
         # ==========================================
-        existe = None
 
-        if uuid_armazem:
+        cur.execute("""
+            SELECT id
+            FROM armazem
+            WHERE uuid = %s
+            AND empresa_id = %s
+        """, (
+            uuid_armazem,
+            empresa_id
+        ))
 
-            cur.execute("""
-                SELECT id
-                FROM armazem
-                WHERE uuid = %s
-                AND empresa_id = %s
-            """, (
-                uuid_armazem,
-                empresa_id
-            ))
-
-            existe = cur.fetchone()
-
-        # ==========================================
-        # PROCURA POR NOME
-        # ==========================================
-        if not existe:
-
-            cur.execute("""
-                SELECT id
-                FROM armazem
-                WHERE lower(local) = lower(%s)
-                AND empresa_id = %s
-            """, (
-                local,
-                empresa_id
-            ))
-
-            existe = cur.fetchone()
+        existe = cur.fetchone()
 
         # ==========================================
         # UPDATE
         # ==========================================
+
         if existe:
 
             cur.execute("""
                 UPDATE armazem
                 SET
                     local = %s,
-                    uuid = COALESCE(uuid, %s)
+                    origem = %s
                 WHERE id = %s
             """, (
                 local,
-                uuid_armazem,
+                origem,
                 existe[0]
             ))
 
         # ==========================================
         # INSERT
         # ==========================================
+
         else:
 
             cur.execute("""
-                INSERT INTO armazem (
+                INSERT INTO armazem
+                (
                     uuid,
                     local,
                     empresa_id,
-                    ativo
+                    ativo,
+                    origem
                 )
-                VALUES (%s,%s,%s,%s)
+                VALUES
+                (
+                    %s,
+                    %s,
+                    %s,
+                    %s,
+                    %s
+                )
             """, (
                 uuid_armazem,
                 local,
                 empresa_id,
-                True
+                True,
+                origem
             ))
 
         conn.commit()
@@ -1737,7 +1905,7 @@ def salvar_armazem():
     try:
 
         dados = request.json
-        print("DADOS RECEBIDOS:", request.get_json())
+
         print("DADOS RECEBIDOS:", dados)
 
         token = dados.get("token")
@@ -1745,59 +1913,87 @@ def salvar_armazem():
         empresa = obter_empresa_por_token(token)
 
         if not empresa:
+
             print("TOKEN INVALIDO")
-            return jsonify({"erro": "TOKEN INVALIDO"}), 401
+
+            return jsonify({
+                "erro": "TOKEN INVALIDO"
+            }), 401
 
         empresa_id = empresa[0]
+
+        local = dados.get("local")
+
+        if not local:
+
+            return jsonify({
+                "erro": "Local obrigatório"
+            }), 400
 
         conn = conectar()
         cur = conn.cursor()
 
-        local = dados.get("local")
-
-        print("EMPRESA:", empresa_id)
-        print("LOCAL:", local)
-
         cur.execute("""
-            SELECT id
+            SELECT id, uuid
             FROM armazem
             WHERE lower(local)=lower(%s)
             AND empresa_id=%s
-        """, (local, empresa_id))
+        """, (
+            local,
+            empresa_id
+        ))
 
         existe = cur.fetchone()
 
-        print("EXISTE:", existe)
-
         if not existe:
 
+            novo_uuid = str(uuid.uuid4())
+
             cur.execute("""
-                INSERT INTO armazem (
+                INSERT INTO armazem
+                (
                     uuid,
                     empresa_id,
                     local,
-                    ativo
+                    ativo,
+                    origem
                 )
-                VALUES (%s,%s,%s,%s)
+                VALUES
+                (
+                    %s,
+                    %s,
+                    %s,
+                    %s,
+                    %s
+                )
             """, (
-                str(uuid.uuid4()),
+                novo_uuid,
                 empresa_id,
                 local,
-                True
+                True,
+                "ONLINE"
             ))
 
             conn.commit()
 
-            print("ARMAZEM INSERIDO")
+            print(
+                "ARMAZEM INSERIDO:",
+                local
+            )
 
         cur.close()
         conn.close()
 
-        return jsonify({"status": "ok"})
+        return jsonify({
+            "status": "ok"
+        })
 
     except Exception as e:
 
-        print("ERRO SALVAR ARMAZEM:", e)
+        print(
+            "ERRO SALVAR ARMAZEM:",
+            e
+        )
 
         return jsonify({
             "erro": str(e)
@@ -1826,11 +2022,14 @@ def api_armazens():
                 uuid,
                 local,
                 empresa_id,
-                ativo
+                ativo,
+                origem
             FROM armazem
             WHERE empresa_id = %s
             ORDER BY local
-        """, (empresa_id,))
+        """, (
+            empresa_id,
+        ))
 
         dados = cur.fetchall()
 
@@ -1843,12 +2042,14 @@ def api_armazens():
                 "uuid": r[1],
                 "local": r[2],
                 "empresa_id": r[3],
-                "ativo": r[4]
+                "ativo": r[4],
+                "origem": r[5]
             }
             for r in dados
         ])
 
     except Exception as e:
+
         return jsonify({
             "erro": str(e)
         }), 500
