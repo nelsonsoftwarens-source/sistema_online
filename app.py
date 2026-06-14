@@ -1641,7 +1641,6 @@ def api_salvar_stock():
 
 from decimal import Decimal
 import uuid
-
 @app.route("/api/transferir_stock", methods=["POST"])
 def transferir_stock():
 
@@ -1649,20 +1648,16 @@ def transferir_stock():
     cur = None
 
     try:
-
         dados = request.json
 
         print("\n========== DEBUG TRANSFER ==========")
         print("DADOS:", dados)
 
         token = dados.get("token")
-
         empresa = obter_empresa_por_token(token)
 
         if not empresa:
-            return jsonify({
-                "error": "TOKEN INVALIDO"
-            }), 401
+            return jsonify({"error": "TOKEN INVALIDO"}), 401
 
         empresa_id = empresa[0]
 
@@ -1670,78 +1665,61 @@ def transferir_stock():
         origem = dados.get("origem")
         destino = dados.get("destino")
 
+        armazem_origem_uuid = dados.get("armazem_origem_uuid")
+        armazem_destino_uuid = dados.get("armazem_destino_uuid")
+
         if not produto_uuid:
-            return jsonify({
-                "error": "produto_uuid inválido"
-            }), 400
+            return jsonify({"error": "produto_uuid inválido"}), 400
 
         try:
             qtd = Decimal(str(dados.get("quantidade")))
         except:
-            return jsonify({
-                "error": "Quantidade inválida"
-            }), 400
+            return jsonify({"error": "Quantidade inválida"}), 400
 
         if qtd <= 0:
-            return jsonify({
-                "error": "Quantidade deve ser maior que zero"
-            }), 400
+            return jsonify({"error": "Quantidade deve ser maior que zero"}), 400
 
         if origem == destino:
-            return jsonify({
-                "error": "Origem e destino não podem ser iguais"
-            }), 400
+            return jsonify({"error": "Origem e destino não podem ser iguais"}), 400
 
         conn = conectar()
         cur = conn.cursor()
 
-        # =====================================
+        # =========================
         # PRODUTO
-        # =====================================
-
+        # =========================
         cur.execute("""
-            SELECT
-                id,
-                descricao
+            SELECT id, descricao
             FROM produtos
-            WHERE uuid = %s
-            AND empresa_id = %s
-        """, (
-            produto_uuid,
-            empresa_id
-        ))
+            WHERE uuid = %s AND empresa_id = %s
+        """, (produto_uuid, empresa_id))
 
         produto = cur.fetchone()
 
         if not produto:
-
-            return jsonify({
-                "error": f"Produto não encontrado: {produto_uuid}"
-            }), 400
+            return jsonify({"error": "Produto não encontrado"}), 400
 
         produto_id = produto[0]
         produto_nome = produto[1]
 
-        # =====================================
+        # =========================
         # SAÍDA
-        # =====================================
-
+        # =========================
         cur.execute("""
-            INSERT INTO stock
-            (
+            INSERT INTO stock (
                 produto,
                 produto_uuid,
                 quantidade,
                 local,
+                armazem_uuid,
                 data,
                 tipo_movimentacao,
                 uuid,
                 ultima_atualizacao,
                 empresa_id
             )
-            VALUES
-            (
-                %s,%s,%s,%s,
+            VALUES (
+                %s,%s,%s,%s,%s,
                 NOW(),
                 %s,
                 %s,
@@ -1753,31 +1731,30 @@ def transferir_stock():
             produto_uuid,
             -qtd,
             origem,
+            armazem_origem_uuid,
             "transferencia_saida",
             str(uuid.uuid4()),
             empresa_id
         ))
 
-        # =====================================
+        # =========================
         # ENTRADA
-        # =====================================
-
+        # =========================
         cur.execute("""
-            INSERT INTO stock
-            (
+            INSERT INTO stock (
                 produto,
                 produto_uuid,
                 quantidade,
                 local,
+                armazem_uuid,
                 data,
                 tipo_movimentacao,
                 uuid,
                 ultima_atualizacao,
                 empresa_id
             )
-            VALUES
-            (
-                %s,%s,%s,%s,
+            VALUES (
+                %s,%s,%s,%s,%s,
                 NOW(),
                 %s,
                 %s,
@@ -1789,6 +1766,7 @@ def transferir_stock():
             produto_uuid,
             qtd,
             destino,
+            armazem_destino_uuid,
             "transferencia_entrada",
             str(uuid.uuid4()),
             empresa_id
@@ -1804,33 +1782,24 @@ def transferir_stock():
             "produto": produto_nome,
             "quantidade": float(qtd),
             "origem": origem,
-            "destino": destino
+            "destino": destino,
+            "armazem_origem_uuid": armazem_origem_uuid,
+            "armazem_destino_uuid": armazem_destino_uuid
         })
 
     except Exception as e:
-
         print("❌ ERRO TRANSFERÊNCIA:", e)
 
         if conn:
             conn.rollback()
 
-        return jsonify({
-            "error": str(e)
-        }), 500
+        return jsonify({"error": str(e)}), 500
 
     finally:
-
-        try:
-            if cur:
-                cur.close()
-        except:
-            pass
-
-        try:
-            if conn:
-                conn.close()
-        except:
-            pass
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
 
 @app.route("/api/sincronizar_armazens", methods=["POST"])
 def sincronizar_armazens():
