@@ -1497,6 +1497,12 @@ def api_salvar_stock():
 
         dados = request.json
 
+        print("\n===== DADOS RECEBIDOS ONLINE =====")
+        print("ARMAZEM UUID RECEBIDO:", dados.get("armazem_uuid"))
+
+        for k, v in dados.items():
+            print(k, type(v), v)
+
         token = dados.get("token")
         empresa = obter_empresa_por_token(token)
 
