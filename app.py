@@ -1364,7 +1364,10 @@ def api_stock():
                 s.id,
                 p.uuid,
                 p.descricao,
-                s.local,
+
+                s.armazem_uuid,
+                a.local AS armazem_nome,
+
                 s.quantidade,
                 s.data,
                 s.ultima_atualizacao,
@@ -1373,9 +1376,11 @@ def api_stock():
                 s.sincronizado,
                 s.origem,
                 s.empresa_id
+
             FROM stock s
-            JOIN produtos p
-                ON p.uuid = s.produto_uuid
+            JOIN produtos p ON p.uuid = s.produto_uuid
+            LEFT JOIN armazem a ON a.uuid = s.armazem_uuid
+
             WHERE s.empresa_id = %s
             ORDER BY s.data DESC
         """, (empresa_id,))
@@ -1390,15 +1395,20 @@ def api_stock():
                 "id": r[0],
                 "produto_uuid": r[1],
                 "produto": r[2],
-                "armazem": r[3],
-                "quantidade": float(r[4]),
-                "data": str(r[5]) if r[5] else None,
-                "ultima_atualizacao": str(r[6]) if r[6] else None,
-                "uuid": r[7],
-                "tipo_movimentacao": r[8],
-                "sincronizado": r[9],
-                "origem": r[10],
-                "empresa_id": r[11]
+
+                "armazem_uuid": r[3],
+                "armazem": r[4],   # nome
+
+                "quantidade": float(r[5]),
+
+                "data": str(r[6]) if r[6] else None,
+                "ultima_atualizacao": str(r[7]) if r[7] else None,
+
+                "uuid": r[8],
+                "tipo_movimentacao": r[9],
+                "sincronizado": r[10],
+                "origem": r[11],
+                "empresa_id": r[12]
             }
             for r in rows
         ])
@@ -1488,13 +1498,10 @@ def api_salvar_stock():
         dados = request.json
 
         token = dados.get("token")
-
         empresa = obter_empresa_por_token(token)
 
         if not empresa:
-            return jsonify({
-                "erro": "TOKEN INVALIDO"
-            }), 401
+            return jsonify({"erro": "TOKEN INVALIDO"}), 401
 
         empresa_id = empresa[0]
 
@@ -1503,45 +1510,51 @@ def api_salvar_stock():
 
         uuid_stock = dados.get("uuid")
         produto_uuid = dados.get("produto_uuid")
+        armazem_uuid = dados.get("armazem_uuid")
         local_nome = dados.get("local")
 
-        # =====================================
+        # =========================
         # PRODUTO
-        # =====================================
-
+        # =========================
         cur.execute("""
             SELECT id
             FROM produtos
             WHERE uuid = %s
             AND empresa_id = %s
-        """, (
-            produto_uuid,
-            empresa_id
-        ))
+        """, (produto_uuid, empresa_id))
 
         produto = cur.fetchone()
 
         if not produto:
-
-            return jsonify({
-                "error": f"Produto não encontrado: {produto_uuid}"
-            }), 400
+            return jsonify({"error": "Produto não encontrado"}), 400
 
         produto_id = produto[0]
 
-        # =====================================
-        # VERIFICA STOCK
-        # =====================================
+        # =========================
+        # ARMAZÉM (UUID base)
+        # =========================
+        if armazem_uuid:
+            cur.execute("""
+                SELECT id
+                FROM armazem
+                WHERE uuid = %s
+                AND empresa_id = %s
+            """, (armazem_uuid, empresa_id))
 
+            armazem = cur.fetchone()
+
+            if not armazem:
+                return jsonify({"error": "Armazém não encontrado"}), 400
+
+        # =========================
+        # EXISTE?
+        # =========================
         cur.execute("""
             SELECT id
             FROM stock
             WHERE uuid = %s
             AND empresa_id = %s
-        """, (
-            uuid_stock,
-            empresa_id
-        ))
+        """, (uuid_stock, empresa_id))
 
         existe = cur.fetchone()
 
@@ -1552,8 +1565,9 @@ def api_salvar_stock():
                 SET
                     produto = %s,
                     produto_uuid = %s,
-                    quantidade = %s,
+                    armazem_uuid = %s,
                     local = %s,
+                    quantidade = %s,
                     data = %s,
                     ultima_atualizacao = %s,
                     tipo_movimentacao = %s
@@ -1561,8 +1575,9 @@ def api_salvar_stock():
             """, (
                 produto_id,
                 produto_uuid,
-                dados.get("quantidade"),
+                armazem_uuid,
                 local_nome,
+                dados.get("quantidade"),
                 dados.get("data"),
                 dados.get("ultima_atualizacao"),
                 dados.get("tipo_movimentacao"),
@@ -1572,28 +1587,26 @@ def api_salvar_stock():
         else:
 
             cur.execute("""
-                INSERT INTO stock
-                (
+                INSERT INTO stock (
                     uuid,
                     produto,
                     produto_uuid,
-                    quantidade,
+                    armazem_uuid,
                     local,
+                    quantidade,
                     data,
                     ultima_atualizacao,
                     tipo_movimentacao,
                     empresa_id
                 )
-                VALUES
-                (
-                    %s,%s,%s,%s,%s,%s,%s,%s,%s
-                )
+                VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
             """, (
                 uuid_stock,
                 produto_id,
                 produto_uuid,
-                dados.get("quantidade"),
+                armazem_uuid,
                 local_nome,
+                dados.get("quantidade"),
                 dados.get("data"),
                 dados.get("ultima_atualizacao"),
                 dados.get("tipo_movimentacao"),
@@ -1602,9 +1615,7 @@ def api_salvar_stock():
 
         conn.commit()
 
-        return jsonify({
-            "status": "ok"
-        })
+        return jsonify({"status": "ok"})
 
     except Exception as e:
 
@@ -1613,23 +1624,14 @@ def api_salvar_stock():
         if conn:
             conn.rollback()
 
-        return jsonify({
-            "error": str(e)
-        }), 500
+        return jsonify({"error": str(e)}), 500
 
     finally:
 
-        try:
-            if cur:
-                cur.close()
-        except:
-            pass
-
-        try:
-            if conn:
-                conn.close()
-        except:
-            pass
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
 
 from decimal import Decimal
 import uuid
