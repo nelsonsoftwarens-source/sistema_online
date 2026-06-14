@@ -1480,6 +1480,9 @@ def api_stock_filtrado():
 @app.route("/api/salvar_stock", methods=["POST"])
 def api_salvar_stock():
 
+    conn = None
+    cur = None
+
     try:
 
         dados = request.json
@@ -1500,41 +1503,41 @@ def api_salvar_stock():
 
         uuid_stock = dados.get("uuid")
         produto_uuid = dados.get("produto_uuid")
+        local_nome = dados.get("local")
 
         # =====================================
-        # BUSCAR ID DO PRODUTO PELO UUID
+        # PRODUTO
         # =====================================
 
-        produto_id = None
+        cur.execute("""
+            SELECT id
+            FROM produtos
+            WHERE uuid = %s
+            AND empresa_id = %s
+        """, (
+            produto_uuid,
+            empresa_id
+        ))
 
-        if produto_uuid:
+        produto = cur.fetchone()
 
-            cur.execute("""
-                SELECT id
-                FROM produtos
-                WHERE uuid = %s
-            """, (produto_uuid,))
-
-            resultado = cur.fetchone()
-
-            if resultado:
-                produto_id = resultado[0]
-
-        if not produto_id:
+        if not produto:
 
             return jsonify({
-                "error": f"Produto não encontrado para UUID: {produto_uuid}"
+                "error": f"Produto não encontrado: {produto_uuid}"
             }), 400
 
+        produto_id = produto[0]
+
         # =====================================
-        # VERIFICAR SE JÁ EXISTE
+        # VERIFICA STOCK
         # =====================================
 
         cur.execute("""
             SELECT id
             FROM stock
             WHERE uuid = %s
-              AND empresa_id = %s
+            AND empresa_id = %s
         """, (
             uuid_stock,
             empresa_id
@@ -1559,7 +1562,7 @@ def api_salvar_stock():
                 produto_id,
                 produto_uuid,
                 dados.get("quantidade"),
-                dados.get("local"),
+                local_nome,
                 dados.get("data"),
                 dados.get("ultima_atualizacao"),
                 dados.get("tipo_movimentacao"),
@@ -1590,7 +1593,7 @@ def api_salvar_stock():
                 produto_id,
                 produto_uuid,
                 dados.get("quantidade"),
-                dados.get("local"),
+                local_nome,
                 dados.get("data"),
                 dados.get("ultima_atualizacao"),
                 dados.get("tipo_movimentacao"),
@@ -1598,9 +1601,6 @@ def api_salvar_stock():
             ))
 
         conn.commit()
-
-        cur.close()
-        conn.close()
 
         return jsonify({
             "status": "ok"
@@ -1610,80 +1610,117 @@ def api_salvar_stock():
 
         print("ERRO SALVAR STOCK:", e)
 
+        if conn:
+            conn.rollback()
+
         return jsonify({
             "error": str(e)
         }), 500
 
+    finally:
+
+        try:
+            if cur:
+                cur.close()
+        except:
+            pass
+
+        try:
+            if conn:
+                conn.close()
+        except:
+            pass
+
 from decimal import Decimal
 import uuid
-from flask import request, jsonify
+
 @app.route("/api/transferir_stock", methods=["POST"])
 def transferir_stock():
 
+    conn = None
+    cur = None
+
     try:
+
         dados = request.json
 
         print("\n========== DEBUG TRANSFER ==========")
         print("DADOS:", dados)
 
+        token = dados.get("token")
+
+        empresa = obter_empresa_por_token(token)
+
+        if not empresa:
+            return jsonify({
+                "error": "TOKEN INVALIDO"
+            }), 401
+
+        empresa_id = empresa[0]
+
         produto_uuid = dados.get("produto_uuid")
         origem = dados.get("origem")
         destino = dados.get("destino")
-        empresa_id = session.get("empresa_id")
-
-        # =============================
-        # VALIDAÇÕES
-        # =============================
-        if not empresa_id:
-            return jsonify({"error": "empresa_id em falta"}), 401
 
         if not produto_uuid:
-            return jsonify({"error": "produto_uuid inválido"}), 400
+            return jsonify({
+                "error": "produto_uuid inválido"
+            }), 400
 
         try:
             qtd = Decimal(str(dados.get("quantidade")))
-        except Exception:
-            return jsonify({"error": "Quantidade inválida"}), 400
+        except:
+            return jsonify({
+                "error": "Quantidade inválida"
+            }), 400
 
         if qtd <= 0:
-            return jsonify({"error": "Quantidade deve ser maior que zero"}), 400
+            return jsonify({
+                "error": "Quantidade deve ser maior que zero"
+            }), 400
 
         if origem == destino:
-            return jsonify({"error": "Origem e destino não podem ser iguais"}), 400
+            return jsonify({
+                "error": "Origem e destino não podem ser iguais"
+            }), 400
 
         conn = conectar()
         cur = conn.cursor()
 
-        # =============================
-        # VALIDAR PRODUTO
-        # =============================
+        # =====================================
+        # PRODUTO
+        # =====================================
+
         cur.execute("""
-            SELECT id, uuid, descricao
+            SELECT
+                id,
+                descricao
             FROM produtos
             WHERE uuid = %s
-              AND empresa_id = %s
-        """, (produto_uuid, empresa_id))
+            AND empresa_id = %s
+        """, (
+            produto_uuid,
+            empresa_id
+        ))
 
         produto = cur.fetchone()
 
         if not produto:
-            cur.close()
-            conn.close()
 
             return jsonify({
                 "error": f"Produto não encontrado: {produto_uuid}"
             }), 400
 
-        produto_id, produto_uuid_db, produto_nome = produto
+        produto_id = produto[0]
+        produto_nome = produto[1]
 
-        print("✔ Produto encontrado:", produto_nome)
-        print("✔ Produto ID:", produto_id)
+        # =====================================
+        # SAÍDA
+        # =====================================
 
-        # =============================
-        # SAÍDA DO ARMAZÉM ORIGEM
-        # =============================
         cur.execute("""
-            INSERT INTO stock (
+            INSERT INTO stock
+            (
                 produto,
                 produto_uuid,
                 quantidade,
@@ -1694,11 +1731,9 @@ def transferir_stock():
                 ultima_atualizacao,
                 empresa_id
             )
-            VALUES (
-                %s,
-                %s,
-                %s,
-                %s,
+            VALUES
+            (
+                %s,%s,%s,%s,
                 NOW(),
                 %s,
                 %s,
@@ -1715,11 +1750,13 @@ def transferir_stock():
             empresa_id
         ))
 
-        # =============================
-        # ENTRADA NO ARMAZÉM DESTINO
-        # =============================
+        # =====================================
+        # ENTRADA
+        # =====================================
+
         cur.execute("""
-            INSERT INTO stock (
+            INSERT INTO stock
+            (
                 produto,
                 produto_uuid,
                 quantidade,
@@ -1730,11 +1767,9 @@ def transferir_stock():
                 ultima_atualizacao,
                 empresa_id
             )
-            VALUES (
-                %s,
-                %s,
-                %s,
-                %s,
+            VALUES
+            (
+                %s,%s,%s,%s,
                 NOW(),
                 %s,
                 %s,
@@ -1753,9 +1788,6 @@ def transferir_stock():
 
         conn.commit()
 
-        cur.close()
-        conn.close()
-
         print("✔ TRANSFERÊNCIA OK")
 
         return jsonify({
@@ -1771,18 +1803,26 @@ def transferir_stock():
 
         print("❌ ERRO TRANSFERÊNCIA:", e)
 
-        try:
+        if conn:
             conn.rollback()
+
+        return jsonify({
+            "error": str(e)
+        }), 500
+
+    finally:
+
+        try:
+            if cur:
+                cur.close()
         except:
             pass
 
         try:
-            cur.close()
-            conn.close()
+            if conn:
+                conn.close()
         except:
             pass
-
-        return jsonify({"error": str(e)}), 500
 
 @app.route("/api/sincronizar_armazens", methods=["POST"])
 def sincronizar_armazens():
