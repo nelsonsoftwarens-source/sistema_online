@@ -101,12 +101,15 @@ tr:hover{
 
         <h2>📦 Stock</h2>
 
-        <input type="text" id="filtro-produto" class="campo-busca" placeholder="🔎 Produto">
+        <input type="text"
+               id="filtro-produto"
+               class="campo-busca"
+               placeholder="🔎 Produto">
 
         <select id="filtro-armazem" class="campo-busca">
             <option value="">Todos os Armazéns</option>
             {% for a in armazens %}
-                <option value="{{ a[0]|lower }}">{{ a[0] }}</option>
+                <option value="{{ a[1] }}">{{ a[1] }}</option>
             {% endfor %}
         </select>
 
@@ -117,22 +120,21 @@ tr:hover{
 
         <h3>🔄 Transferência</h3>
 
-        <!-- aqui fica o UUID escondido -->
         <input type="hidden" id="produto-uuid">
 
-        <input type="text" id="produto-transfer" placeholder="Clique na tabela para selecionar" readonly>
+        <input type="text" id="produto-transfer" placeholder="Selecione produto" readonly>
 
         <input type="number" id="qtd-transfer" placeholder="Quantidade" min="1">
 
         <select id="armazem-origem">
             {% for a in armazens %}
-                <option value="{{ a[0] }}">{{ a[0] }}</option>
+                <option value="{{ a[0] }}">{{ a[1] }}</option>
             {% endfor %}
         </select>
 
         <select id="armazem-destino">
             {% for a in armazens %}
-                <option value="{{ a[0] }}">{{ a[0] }}</option>
+                <option value="{{ a[0] }}">{{ a[1] }}</option>
             {% endfor %}
         </select>
 
@@ -143,41 +145,40 @@ tr:hover{
     </div>
 
     <!-- ================= TABELA ================= -->
-<div class="stock-tabela">
+    <div class="stock-tabela">
 
-    <table>
+        <table>
+            <thead>
+                <tr>
+                    <th>Produto</th>
+                    <th>Armazém</th>
+                    <th>Qtd</th>
+                    <th>Última Atualização</th>
+                </tr>
+            </thead>
 
-        <thead>
-            <tr>
-                <th>Produto</th>
-                <th>Armazém</th>
-                <th>Qtd</th>
-                <th>Última Atualização</th>
-            </tr>
-        </thead>
+            <tbody id="tbody-stock">
 
-        <tbody>
+                {% for s in stock %}
+                <tr class="linha-stock"
+                    data-uuid="{{ s[0] }}"
+                    data-nome="{{ s[1]|lower }}"
+                    data-armazem="{{ s[2]|lower }}"
+                    onclick="selecionarProduto(this)">
 
-            {% for s in stock %}
+                    <td>{{ s[1] }}</td>
+                    <td>{{ s[2] }}</td>
+                    <td>{{ s[3] }}</td>
+                    <td>{{ s[4] }}</td>
 
-            <tr class="linha-stock"
-                data-uuid="{{ s[0] }}"
-                data-nome="{{ s[1]|lower }}"
-                data-armazem="{{ s[2]|lower }}"
-                onclick="selecionarProduto(this)">
+                </tr>
+                {% endfor %}
 
-                <td>{{ s[1] }}</td>
-                <td>{{ s[2] }}</td>
-                <td>{{ s[3] }}</td>
-                <td>{{ s[4] }}</td>
+            </tbody>
 
-            </tr>
+        </table>
 
-            {% endfor %}
-
-        </tbody>
-
-    </table>
+    </div>
 
 </div>
 
@@ -185,26 +186,50 @@ tr:hover{
 
 let produtoUUIDSelecionado = null;
 
-/* ================= SELEÇÃO DO PRODUTO ================= */
+/* ================= SELEÇÃO ================= */
 function selecionarProduto(linha){
 
-    // remove seleção anterior (opcional)
     document.querySelectorAll(".linha-stock").forEach(l => {
         l.classList.remove("selecionado");
     });
 
     linha.classList.add("selecionado");
 
-    // nome do produto (para visual)
     document.getElementById("produto-transfer").value =
         linha.dataset.nome;
 
-    // UUID REAL (CORRETO)
     produtoUUIDSelecionado = linha.dataset.uuid;
-
-    document.getElementById("produto-uuid").value =
-        produtoUUIDSelecionado;
+    document.getElementById("produto-uuid").value = produtoUUIDSelecionado;
 }
+
+/* ================= FILTRO DINÂMICO ================= */
+function aplicarFiltros(){
+
+    let produto = document.getElementById("filtro-produto").value.toLowerCase();
+    let armazem = document.getElementById("filtro-armazem").value.toLowerCase();
+
+    document.querySelectorAll(".linha-stock").forEach(row => {
+
+        let nome = row.dataset.nome;
+        let arm = row.dataset.armazem;
+
+        let matchProduto = !produto || nome.includes(produto);
+        let matchArmazem = !armazem || arm.includes(armazem);
+
+        if(matchProduto && matchArmazem){
+            row.style.display = "";
+        } else {
+            row.style.display = "none";
+        }
+    });
+}
+
+/* eventos */
+document.getElementById("filtro-produto")
+    .addEventListener("input", aplicarFiltros);
+
+document.getElementById("filtro-armazem")
+    .addEventListener("change", aplicarFiltros);
 
 /* ================= TRANSFERÊNCIA ================= */
 function transferirStock(){
@@ -215,22 +240,7 @@ function transferirStock(){
     let destino = document.getElementById("armazem-destino").value;
 
     if(!uuid){
-        alert("Selecione um produto na tabela!");
-        return;
-    }
-
-    if(!qtd || qtd <= 0){
-        alert("Quantidade inválida!");
-        return;
-    }
-
-    if(!origem || !destino){
-        alert("Selecione armazéns!");
-        return;
-    }
-
-    if(origem === destino){
-        alert("Origem e destino não podem ser iguais!");
+        alert("Selecione um produto!");
         return;
     }
 
@@ -241,23 +251,21 @@ function transferirStock(){
             produto_uuid: uuid,
             quantidade: Number(qtd),
             origem: origem,
-            destino: destino
+            destino: destino,
+            armazem_origem_uuid: origem,
+            armazem_destino_uuid: destino
         })
     })
     .then(r => r.json())
     .then(data => {
 
         if(data.status === "ok"){
-            alert("Transferência realizada com sucesso!");
+            alert("Transferência OK");
             location.reload();
         } else {
-            alert(data.error || "Erro na transferência");
+            alert(data.error || "Erro");
         }
 
-    })
-    .catch(err => {
-        console.error(err);
-        alert("Erro de comunicação com o servidor");
     });
 
 }
