@@ -3050,6 +3050,190 @@ def api_fornecedor(id):
         "documento":r[5]
     })
 
+from flask import request, jsonify
+import uuid
+
+@app.route("/api/compras", methods=["POST"])
+def api_compras():
+
+    conn = None
+    cur = None
+
+    try:
+
+        dados = request.json
+
+        print("\n========== COMPRA SYNC ==========")
+        print("DADOS:", dados)
+
+        # =========================
+        # TOKEN OBRIGATÓRIO
+        # =========================
+        token = dados.get("token")
+
+        if not token:
+            return jsonify({"error": "TOKEN FALTANDO"}), 401
+
+        empresa = obter_empresa_por_token(token)
+
+        if not empresa:
+            return jsonify({"error": "TOKEN INVALIDO"}), 401
+
+        empresa_id = empresa[0]
+
+        # =========================
+        # DADOS
+        # =========================
+        compra_uuid = dados.get("uuid") or str(uuid.uuid4())
+
+        registro_id = dados.get("registro_id")
+        numero_fatura = dados.get("numero_fatura")
+
+        fornecedor = dados.get("fornecedor")
+        produto = dados.get("produto")
+
+        quantidade = dados.get("quantidade")
+        valor_unit = dados.get("valor_unit")
+        valor_total = dados.get("valor_total")
+
+        armazem_uuid = dados.get("armazem_uuid")
+
+        conn = conectar()
+        cur = conn.cursor()
+
+        # =========================
+        # CHECK DUPLICADO
+        # =========================
+        cur.execute("""
+            SELECT id
+            FROM compras
+            WHERE uuid=%s
+            AND empresa_id=%s
+        """, (compra_uuid, empresa_id))
+
+        existe = cur.fetchone()
+
+        if existe:
+            print("✔ COMPRA JÁ EXISTE:", compra_uuid)
+
+            return jsonify({
+                "status": "existe",
+                "id": existe[0],
+                "uuid": compra_uuid
+            })
+
+        # =========================
+        # INSERT
+        # =========================
+        cur.execute("""
+            INSERT INTO compras
+            (
+                uuid,
+                registro_id,
+                numero_fatura,
+                fornecedor,
+                produto,
+                quantidade,
+                valor_unit,
+                valor_total,
+                armazem_uuid,
+                empresa_id,
+                data
+            )
+            VALUES
+            (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,CURRENT_DATE)
+        """, (
+            compra_uuid,
+            registro_id,
+            numero_fatura,
+            fornecedor,
+            produto,
+            quantidade,
+            valor_unit,
+            valor_total,
+            armazem_uuid,
+            empresa_id
+        ))
+
+        conn.commit()
+
+        print("✔ COMPRA INSERIDA ONLINE")
+
+        return jsonify({
+            "status": "ok",
+            "uuid": compra_uuid
+        })
+
+    except Exception as e:
+
+        if conn:
+            conn.rollback()
+
+        print("❌ ERRO COMPRA:", repr(e))
+
+        return jsonify({"error": str(e)}), 500
+
+    finally:
+
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
+
+@app.route("/api/compras", methods=["GET"])
+def api_compras_get():
+
+    try:
+
+        token = request.args.get("token")
+
+        empresa = obter_empresa_por_token(token)
+
+        if not empresa:
+            return jsonify([])
+
+        empresa_id = empresa[0]
+
+        conn = conectar()
+        cur = conn.cursor()
+
+        cur.execute("""
+            SELECT
+                uuid,
+                registro_id,
+                numero_fatura,
+                fornecedor,
+                produto,
+                quantidade,
+                valor_unit,
+                valor_total,
+                armazem_uuid
+            FROM compras
+            WHERE empresa_id=%s
+        """, (empresa_id,))
+
+        dados = cur.fetchall()
+
+        cur.close()
+        conn.close()
+
+        return jsonify([
+            {
+                "uuid": r[0],
+                "registro_id": r[1],
+                "numero_fatura": r[2],
+                "fornecedor": r[3],
+                "produto": r[4],
+                "quantidade": r[5],
+                "valor_unit": r[6],
+                "valor_total": r[7],
+                "armazem_uuid": r[8]
+            }
+            for r in dados
+        ])
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 from flask import session, request, redirect
@@ -3079,6 +3263,8 @@ def proteger_rotas():
         "api_salvar_venda",
         "api_fornecedores",
         "api_fornecedores_get",
+        "api_compras_get",
+        "api_compras",
     ]
 
     if request.endpoint in rotas_livres:
