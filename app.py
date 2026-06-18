@@ -2737,8 +2737,6 @@ def fornecedores():
         fornecedores=fornecedores
     )
 
-import uuid
-
 @app.route("/api/fornecedores", methods=["POST"])
 def api_fornecedores():
 
@@ -2747,13 +2745,24 @@ def api_fornecedores():
 
     try:
 
-        print("\n========== FORNECEDOR ==========")
-
         dados = request.json
 
+        print("\n========== FORNECEDOR ==========")
         print("DADOS:", dados)
 
-        empresa_id = session.get("empresa_id")
+        token = dados.get("token")
+
+        empresa = obter_empresa_por_token(token)
+
+        if not empresa:
+
+            print("TOKEN INVALIDO")
+
+            return jsonify({
+                "erro": "TOKEN INVALIDO"
+            }), 401
+
+        empresa_id = empresa[0]
 
         print("EMPRESA_ID:", empresa_id)
 
@@ -2768,27 +2777,22 @@ def api_fornecedores():
         if not fornecedor_uuid:
             fornecedor_uuid = str(uuid.uuid4())
 
-        print("UUID:", fornecedor_uuid)
-        print("NOME:", nome)
-
         conn = conectar()
         cur = conn.cursor()
-
-        print("CONEXAO OK")
 
         cur.execute("""
             SELECT id
             FROM fornecedores
             WHERE uuid=%s
-        """,(fornecedor_uuid,))
+            AND empresa_id=%s
+        """, (
+            fornecedor_uuid,
+            empresa_id
+        ))
 
         existe = cur.fetchone()
 
-        print("EXISTE:", existe)
-
         if existe:
-
-            print("FORNECEDOR JA EXISTE")
 
             return jsonify({
                 "status":"existe",
@@ -2811,7 +2815,7 @@ def api_fornecedores():
                 %s,%s,%s,%s,%s,%s,%s
             )
             RETURNING id
-        """,(
+        """, (
             nome,
             telefone,
             email,
@@ -2823,11 +2827,9 @@ def api_fornecedores():
 
         fornecedor_id = cur.fetchone()[0]
 
-        print("ID GERADO:", fornecedor_id)
-
         conn.commit()
 
-        print("COMMIT OK")
+        print("FORNECEDOR INSERIDO:", fornecedor_id)
 
         return jsonify({
             "status":"ok",
@@ -2838,17 +2840,14 @@ def api_fornecedores():
     except Exception as e:
 
         import traceback
-
         traceback.print_exc()
-
-        print("ERRO:", repr(e))
 
         if conn:
             conn.rollback()
 
         return jsonify({
-            "error":str(e)
-        }),500
+            "erro": str(e)
+        }), 500
 
     finally:
 
