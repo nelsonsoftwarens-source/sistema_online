@@ -2737,6 +2737,9 @@ def fornecedores():
         fornecedores=fornecedores
     )
 
+import uuid
+from flask import request, jsonify
+
 @app.route("/api/fornecedores", methods=["POST"])
 def api_fornecedores():
 
@@ -2744,35 +2747,33 @@ def api_fornecedores():
     cur = None
 
     try:
-
         dados = request.json
 
-        print("\n========== FORNECEDOR ==========")
+        print("\n========== FORNECEDOR SYNC ==========")
         print("DADOS:", dados)
 
+        # =========================
+        # TOKEN OBRIGATÓRIO
+        # =========================
         token = dados.get("token")
+        if not token:
+            return jsonify({"error": "TOKEN FALTANDO"}), 401
 
         empresa = obter_empresa_por_token(token)
-
         if not empresa:
-
-            print("TOKEN INVALIDO")
-
-            return jsonify({
-                "erro": "TOKEN INVALIDO"
-            }), 401
+            return jsonify({"error": "TOKEN INVALIDO"}), 401
 
         empresa_id = empresa[0]
 
-        print("EMPRESA_ID:", empresa_id)
-
+        # =========================
+        # DADOS
+        # =========================
+        fornecedor_uuid = dados.get("uuid")
         nome = dados.get("nome")
         telefone = dados.get("telefone")
         email = dados.get("email")
         endereco = dados.get("endereco")
         documento = dados.get("documento")
-
-        fornecedor_uuid = dados.get("uuid")
 
         if not fornecedor_uuid:
             fornecedor_uuid = str(uuid.uuid4())
@@ -2780,28 +2781,32 @@ def api_fornecedores():
         conn = conectar()
         cur = conn.cursor()
 
+        # =========================
+        # CHECK POR UUID
+        # =========================
         cur.execute("""
             SELECT id
             FROM fornecedores
-            WHERE uuid=%s
-            AND empresa_id=%s
-        """, (
-            fornecedor_uuid,
-            empresa_id
-        ))
+            WHERE uuid = %s
+            AND empresa_id = %s
+        """, (fornecedor_uuid, empresa_id))
 
         existe = cur.fetchone()
 
         if existe:
+            print("✔ FORNECEDOR JA EXISTE:", fornecedor_uuid)
 
             return jsonify({
-                "status":"existe",
-                "id":existe[0]
+                "status": "existe",
+                "id": existe[0],
+                "uuid": fornecedor_uuid
             })
 
+        # =========================
+        # INSERT
+        # =========================
         cur.execute("""
-            INSERT INTO fornecedores
-            (
+            INSERT INTO fornecedores (
                 nome,
                 telefone,
                 email,
@@ -2810,10 +2815,7 @@ def api_fornecedores():
                 uuid,
                 empresa_id
             )
-            VALUES
-            (
-                %s,%s,%s,%s,%s,%s,%s
-            )
+            VALUES (%s,%s,%s,%s,%s,%s,%s)
             RETURNING id
         """, (
             nome,
@@ -2829,31 +2831,25 @@ def api_fornecedores():
 
         conn.commit()
 
-        print("FORNECEDOR INSERIDO:", fornecedor_id)
+        print("✔ FORNECEDOR INSERIDO:", fornecedor_id)
 
         return jsonify({
-            "status":"ok",
-            "id":fornecedor_id,
-            "uuid":fornecedor_uuid
+            "status": "ok",
+            "id": fornecedor_id,
+            "uuid": fornecedor_uuid
         })
 
     except Exception as e:
-
-        import traceback
-        traceback.print_exc()
-
         if conn:
             conn.rollback()
 
-        return jsonify({
-            "erro": str(e)
-        }), 500
+        print("❌ ERRO FORNECEDOR:", repr(e))
+
+        return jsonify({"error": str(e)}), 500
 
     finally:
-
         if cur:
             cur.close()
-
         if conn:
             conn.close()
 
