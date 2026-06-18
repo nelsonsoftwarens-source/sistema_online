@@ -2900,6 +2900,10 @@ def api_fornecedor(id):
 from flask import session, request, redirect
 @app.before_request
 def proteger_rotas():
+    print(
+        "PATH:", request.path,
+        "ENDPOINT:", request.endpoint
+        )
 
     rotas_livres = [
         "login",
