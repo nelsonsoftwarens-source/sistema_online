@@ -2853,6 +2853,54 @@ def api_fornecedores():
         if conn:
             conn.close()
 
+@app.route("/api/fornecedores", methods=["GET"])
+def api_fornecedores_get():
+
+    try:
+        token = request.args.get("token")
+
+        empresa = obter_empresa_por_token(token)
+
+        if not empresa:
+            return jsonify([])
+
+        empresa_id = empresa[0]
+
+        conn = conectar()
+        cur = conn.cursor()
+
+        cur.execute("""
+            SELECT
+                uuid,
+                nome,
+                telefone,
+                email,
+                endereco,
+                documento
+            FROM fornecedores
+            WHERE empresa_id = %s
+        """, (empresa_id,))
+
+        dados = cur.fetchall()
+
+        cur.close()
+        conn.close()
+
+        return jsonify([
+            {
+                "uuid": r[0],
+                "nome": r[1],
+                "telefone": r[2],
+                "email": r[3],
+                "endereco": r[4],
+                "documento": r[5]
+            }
+            for r in dados
+        ])
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route("/api/fornecedor/<int:id>")
 def api_fornecedor(id):
 
@@ -2917,7 +2965,8 @@ def proteger_rotas():
         "api_tickets",
         "api_vendas",
         "api_salvar_venda",
-        "api_fornecedores"
+        "api_fornecedores",
+        "api_fornecedores_get",
     ]
 
     if request.endpoint in rotas_livres:
