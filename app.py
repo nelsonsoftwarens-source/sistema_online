@@ -2855,8 +2855,25 @@ def api_fornecedores():
 
 @app.route("/api/fornecedores", methods=["GET"])
 def api_fornecedores_get():
-
+    
+    print("\n========== GET FORNECEDORES ==========")
     try:
+        token = request.args.get("token")
+
+        print("TOKEN RECEBIDO:", token)
+
+        empresa = obter_empresa_por_token(token)
+
+        print("EMPRESA:", empresa)
+
+        if not empresa:
+            print("TOKEN INVALIDO")
+            return jsonify([])
+
+        empresa_id = empresa[0]
+
+        print("EMPRESA_ID:", empresa_id)
+
         token = request.args.get("token")
 
         empresa = obter_empresa_por_token(token)
