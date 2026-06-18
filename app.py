@@ -2853,9 +2853,104 @@ def api_fornecedores():
         if conn:
             conn.close()
 
+import uuid
+from flask import request, jsonify, session
+
+@app.route("/api/fornecedor", methods=["POST"])
+def salvar_fornecedor_local():
+
+    conn = None
+    cur = None
+
+    try:
+
+        print("\n========== CADASTRO FORNECEDOR LOCAL ==========")
+
+        dados = request.json
+        print("DADOS:", dados)
+
+        # =========================
+        # EMPRESA VIA SESSION
+        # =========================
+        empresa_id = session.get("empresa_id")
+
+        if not empresa_id:
+            return jsonify({"error": "NAO AUTENTICADO"}), 401
+
+        # =========================
+        # DADOS
+        # =========================
+        nome = dados.get("nome")
+        telefone = dados.get("telefone")
+        email = dados.get("email")
+        endereco = dados.get("endereco")
+        documento = dados.get("documento")
+
+        if not nome:
+            return jsonify({"error": "Nome obrigatório"}), 400
+
+        fornecedor_uuid = str(uuid.uuid4())
+
+        conn = conectar()
+        cur = conn.cursor()
+
+        # =========================
+        # INSERT
+        # =========================
+        cur.execute("""
+            INSERT INTO fornecedores (
+                nome,
+                telefone,
+                email,
+                endereco,
+                documento,
+                uuid,
+                empresa_id
+            )
+            VALUES (%s,%s,%s,%s,%s,%s,%s)
+            RETURNING id
+        """, (
+            nome,
+            telefone,
+            email,
+            endereco,
+            documento,
+            fornecedor_uuid,
+            empresa_id
+        ))
+
+        fornecedor_id = cur.fetchone()[0]
+
+        conn.commit()
+
+        print("✔ FORNECEDOR SALVO LOCAL:", fornecedor_id)
+
+        return jsonify({
+            "status": "ok",
+            "id": fornecedor_id,
+            "uuid": fornecedor_uuid
+        })
+
+    except Exception as e:
+
+        if conn:
+            conn.rollback()
+
+        print("❌ ERRO FORNECEDOR LOCAL:", repr(e))
+
+        return jsonify({"error": str(e)}), 500
+
+    finally:
+
+        if cur:
+            cur.close()
+
+        if conn:
+            conn.close()
+
 @app.route("/api/fornecedores", methods=["GET"])
 def api_fornecedores_get():
-    
+
     print("\n========== GET FORNECEDORES ==========")
     try:
         token = request.args.get("token")
