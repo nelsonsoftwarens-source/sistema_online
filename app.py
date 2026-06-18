@@ -2747,7 +2747,15 @@ def api_fornecedores():
 
     try:
 
+        print("\n========== FORNECEDOR ==========")
+
         dados = request.json
+
+        print("DADOS:", dados)
+
+        empresa_id = session.get("empresa_id")
+
+        print("EMPRESA_ID:", empresa_id)
 
         nome = dados.get("nome")
         telefone = dados.get("telefone")
@@ -2755,32 +2763,18 @@ def api_fornecedores():
         endereco = dados.get("endereco")
         documento = dados.get("documento")
 
-        empresa_id = session.get("empresa_id")
-
-        if not nome:
-            return jsonify({
-                "error":"Nome obrigatório"
-            }),400
-
-        conn = conectar()
-        cur = conn.cursor()
-
-        # =========================
-        # UUID
-        # =========================
-
         fornecedor_uuid = dados.get("uuid")
 
         if not fornecedor_uuid:
             fornecedor_uuid = str(uuid.uuid4())
 
-        print("\n========== FORNECEDOR ==========")
         print("UUID:", fornecedor_uuid)
         print("NOME:", nome)
 
-        # =========================
-        # VERIFICA SE JÁ EXISTE
-        # =========================
+        conn = conectar()
+        cur = conn.cursor()
+
+        print("CONEXAO OK")
 
         cur.execute("""
             SELECT id
@@ -2790,29 +2784,26 @@ def api_fornecedores():
 
         existe = cur.fetchone()
 
+        print("EXISTE:", existe)
+
         if existe:
 
-            print("FORNECEDOR JÁ EXISTE")
+            print("FORNECEDOR JA EXISTE")
 
             return jsonify({
                 "status":"existe",
-                "id":existe[0],
-                "uuid":fornecedor_uuid
+                "id":existe[0]
             })
-
-        # =========================
-        # INSERT
-        # =========================
 
         cur.execute("""
             INSERT INTO fornecedores
             (
-                uuid,
                 nome,
                 telefone,
                 email,
                 endereco,
                 documento,
+                uuid,
                 empresa_id
             )
             VALUES
@@ -2821,20 +2812,22 @@ def api_fornecedores():
             )
             RETURNING id
         """,(
-            fornecedor_uuid,
             nome,
             telefone,
             email,
             endereco,
             documento,
+            fornecedor_uuid,
             empresa_id
         ))
 
         fornecedor_id = cur.fetchone()[0]
 
+        print("ID GERADO:", fornecedor_id)
+
         conn.commit()
 
-        print("✔ FORNECEDOR SALVO")
+        print("COMMIT OK")
 
         return jsonify({
             "status":"ok",
@@ -2844,10 +2837,14 @@ def api_fornecedores():
 
     except Exception as e:
 
+        import traceback
+
+        traceback.print_exc()
+
+        print("ERRO:", repr(e))
+
         if conn:
             conn.rollback()
-
-        print("ERRO FORNECEDOR:", repr(e))
 
         return jsonify({
             "error":str(e)
@@ -2921,6 +2918,7 @@ def proteger_rotas():
         "api_tickets",
         "api_vendas",
         "api_salvar_venda",
+        "api_fornecedores"
     ]
 
     if request.endpoint in rotas_livres:
