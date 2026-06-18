@@ -2420,6 +2420,486 @@ def tickets():
     )
 
 
+@app.route("/compras")
+def compras():
+
+    if "empresa_id" not in session:
+        return redirect("/login")
+
+    conn = conectar()
+    cur = conn.cursor()
+
+    # fornecedores
+    cur.execute("""
+        SELECT id,nome
+        FROM fornecedores
+        ORDER BY nome
+    """)
+    fornecedores = cur.fetchall()
+
+    # produtos
+    cur.execute("""
+        SELECT uuid,descricao
+        FROM produtos
+        ORDER BY descricao
+    """)
+    produtos = cur.fetchall()
+
+    # armazens
+    cur.execute("""
+        SELECT uuid,local
+        FROM armazem
+        WHERE empresa_id=%s
+        ORDER BY local
+    """,(session["empresa_id"],))
+
+    armazens = cur.fetchall()
+
+    # resumo compras
+    cur.execute("""
+        SELECT
+            c.registro_id,
+            f.nome,
+            c.data,
+            SUM(c.valor_total)
+        FROM compras c
+        LEFT JOIN fornecedores f
+            ON f.id=c.fornecedor
+        GROUP BY
+            c.registro_id,
+            f.nome,
+            c.data
+        ORDER BY c.registro_id DESC
+    """)
+
+    compras = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return render_template(
+        "compras.html",
+        fornecedores=fornecedores,
+        produtos=produtos,
+        armazens=armazens,
+        compras=compras
+    )
+
+from decimal import Decimal
+import uuid
+from flask import request, jsonify, session
+@app.route("/api/compras", methods=["POST"])
+def salvar_compra():
+
+    conn = None
+    cur = None
+
+    try:
+        print("\n========== COMPRA DEBUG ==========")
+        dados = request.json
+        print("RAW:", dados)
+
+        empresa_id = session.get("empresa_id")
+        if not empresa_id:
+            return jsonify({"error": "NAO AUTENTICADO"}), 401
+
+        itens = dados.get("itens", [])
+
+        if not isinstance(itens, list) or len(itens) == 0:
+            return jsonify({"error": "Nenhum item na compra"}), 400
+
+        fornecedor = dados.get("fornecedor")
+        armazem_uuid = dados.get("armazem_uuid")
+
+        conn = conectar()
+        cur = conn.cursor()
+
+        # ================= EMPRESA =================
+        cur.execute("SELECT nome FROM empresa WHERE id=%s", (empresa_id,))
+        empresa = cur.fetchone()
+        nome_empresa = empresa[0] if empresa else ""
+
+        # ================= REGISTRO =================
+        cur.execute("SELECT COALESCE(MAX(registro_id),0)+1 FROM compras")
+        registro_id = cur.fetchone()[0]
+        numero_fatura = f"CMP-{registro_id}"
+
+        # ================= LOOP ITENS =================
+        for item in itens:
+
+            print("ITEM:", item)
+
+            produto_uuid = item.get("produto_uuid")
+
+            if not produto_uuid:
+                print("❌ ITEM SEM produto_uuid:", item)
+                continue
+
+            try:
+                quantidade = Decimal(str(item.get("quantidade", 0)))
+                valor_unit = Decimal(str(item.get("valor_unit", 0)))
+            except:
+                continue
+
+            valor_total = quantidade * valor_unit
+
+            # produto
+            cur.execute("""
+                SELECT id FROM produtos
+                WHERE uuid=%s AND empresa_id=%s
+            """, (produto_uuid, empresa_id))
+
+            prod = cur.fetchone()
+
+            if not prod:
+                print("❌ PRODUTO NÃO ENCONTRADO:", produto_uuid)
+                continue
+
+            produto_id = prod[0]
+
+            # armazem
+            cur.execute("""
+                SELECT local FROM armazem
+                WHERE uuid=%s AND empresa_id=%s
+            """, (armazem_uuid, empresa_id))
+
+            arm = cur.fetchone()
+
+            if not arm:
+                return jsonify({"error": "Armazém inválido"}), 400
+
+            local_nome = arm[0]
+
+            # ================= INSERT COMPRA =================
+            cur.execute("""
+                INSERT INTO compras (
+                    fornecedor,
+                    produto,
+                    produto_uuid,
+                    valor_unit,
+                    valor_total,
+                    quantidade,
+                    local,
+                    data,
+                    usuario_logado,
+                    pago,
+                    pagamento,
+                    registro_id,
+                    numero_fatura,
+                    empresa_id,
+                    uuid,
+                    armazem_uuid
+                )
+                VALUES (
+                    %s,%s,%s,%s,%s,%s,%s,
+                    CURRENT_DATE,
+                    %s,
+                    'Sim',
+                    'Pronto Pagamento',
+                    %s,%s,%s,%s,%s
+                )
+            """, (
+                fornecedor,
+                produto_id,
+                produto_uuid,   # 🔥 GARANTIDO AQUI
+                valor_unit,
+                valor_total,
+                quantidade,
+                local_nome,
+                nome_empresa,
+                registro_id,
+                numero_fatura,
+                empresa_id,
+                str(uuid.uuid4()),
+                armazem_uuid
+            ))
+
+            # ================= STOCK =================
+            cur.execute("""
+                INSERT INTO stock (
+                    produto,
+                    produto_uuid,
+                    armazem_uuid,
+                    local,
+                    quantidade,
+                    tipo_movimentacao,
+                    uuid,
+                    data,
+                    ultima_atualizacao,
+                    empresa_id
+                )
+                VALUES (
+                    %s,%s,%s,%s,%s,
+                    'compra',
+                    %s,
+                    NOW(),
+                    NOW(),
+                    %s
+                )
+            """, (
+                produto_id,
+                produto_uuid,
+                armazem_uuid,
+                local_nome,
+                quantidade,
+                str(uuid.uuid4()),
+                empresa_id
+            ))
+
+        conn.commit()
+
+        print("✔ COMPRA OK")
+
+        return jsonify({
+            "status": "ok",
+            "registro_id": registro_id,
+            "numero_fatura": numero_fatura
+        })
+
+    except Exception as e:
+
+        if conn:
+            conn.rollback()
+
+        print("❌ ERRO COMPRA:", repr(e))
+
+        return jsonify({"error": str(e)}), 500
+
+    finally:
+        if cur:
+            cur.close()
+        if conn:
+            conn.close()
+
+@app.route("/api/compra/<int:registro_id>")
+def detalhe_compra(registro_id):
+
+    conn = conectar()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT
+            p.descricao,
+            c.quantidade,
+            c.valor_unit,
+            c.valor_total,
+            c.local
+        FROM compras c
+        JOIN produtos p
+            ON p.id=c.produto
+        WHERE c.registro_id=%s
+    """,(registro_id,))
+
+    dados = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return jsonify([
+        {
+            "produto":r[0],
+            "quantidade":float(r[1]),
+            "valor_unit":float(r[2]),
+            "valor_total":float(r[3]),
+            "armazem":r[4]
+        }
+        for r in dados
+    ])
+
+@app.route("/fornecedores")
+def fornecedores():
+
+    if "empresa_id" not in session:
+        return redirect("/login")
+
+    conn = conectar()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT
+            id,
+            nome,
+            telefone,
+            email,
+            endereco,
+            documento
+        FROM fornecedores
+        ORDER BY nome
+    """)
+
+    fornecedores = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return render_template(
+        "fornecedores.html",
+        fornecedores=fornecedores
+    )
+
+import uuid
+
+@app.route("/api/fornecedores", methods=["POST"])
+def api_fornecedores():
+
+    conn = None
+    cur = None
+
+    try:
+
+        dados = request.json
+
+        nome = dados.get("nome")
+        telefone = dados.get("telefone")
+        email = dados.get("email")
+        endereco = dados.get("endereco")
+        documento = dados.get("documento")
+
+        empresa_id = session.get("empresa_id")
+
+        if not nome:
+            return jsonify({
+                "error":"Nome obrigatório"
+            }),400
+
+        conn = conectar()
+        cur = conn.cursor()
+
+        # =========================
+        # UUID
+        # =========================
+
+        fornecedor_uuid = dados.get("uuid")
+
+        if not fornecedor_uuid:
+            fornecedor_uuid = str(uuid.uuid4())
+
+        print("\n========== FORNECEDOR ==========")
+        print("UUID:", fornecedor_uuid)
+        print("NOME:", nome)
+
+        # =========================
+        # VERIFICA SE JÁ EXISTE
+        # =========================
+
+        cur.execute("""
+            SELECT id
+            FROM fornecedores
+            WHERE uuid=%s
+        """,(fornecedor_uuid,))
+
+        existe = cur.fetchone()
+
+        if existe:
+
+            print("FORNECEDOR JÁ EXISTE")
+
+            return jsonify({
+                "status":"existe",
+                "id":existe[0],
+                "uuid":fornecedor_uuid
+            })
+
+        # =========================
+        # INSERT
+        # =========================
+
+        cur.execute("""
+            INSERT INTO fornecedores
+            (
+                uuid,
+                nome,
+                telefone,
+                email,
+                endereco,
+                documento,
+                empresa_id
+            )
+            VALUES
+            (
+                %s,%s,%s,%s,%s,%s,%s
+            )
+            RETURNING id
+        """,(
+            fornecedor_uuid,
+            nome,
+            telefone,
+            email,
+            endereco,
+            documento,
+            empresa_id
+        ))
+
+        fornecedor_id = cur.fetchone()[0]
+
+        conn.commit()
+
+        print("✔ FORNECEDOR SALVO")
+
+        return jsonify({
+            "status":"ok",
+            "id":fornecedor_id,
+            "uuid":fornecedor_uuid
+        })
+
+    except Exception as e:
+
+        if conn:
+            conn.rollback()
+
+        print("ERRO FORNECEDOR:", repr(e))
+
+        return jsonify({
+            "error":str(e)
+        }),500
+
+    finally:
+
+        if cur:
+            cur.close()
+
+        if conn:
+            conn.close()
+
+@app.route("/api/fornecedor/<int:id>")
+def api_fornecedor(id):
+
+    conn = conectar()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT
+            id,
+            nome,
+            telefone,
+            email,
+            endereco,
+            documento
+        FROM fornecedores
+        WHERE id=%s
+    """,(id,))
+
+    r = cur.fetchone()
+
+    cur.close()
+    conn.close()
+
+    if not r:
+        return jsonify({
+            "error":"Fornecedor não encontrado"
+        }),404
+
+    return jsonify({
+        "id":r[0],
+        "nome":r[1],
+        "telefone":r[2],
+        "email":r[3],
+        "endereco":r[4],
+        "documento":r[5]
+    })
+
+
+
 from flask import session, request, redirect
 @app.before_request
 def proteger_rotas():

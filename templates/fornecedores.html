@@ -1,0 +1,195 @@
+{% extends 'base.html' %}
+
+{% block conteudo %}
+
+<div class="compras-layout">
+
+    <!-- FILTROS -->
+    <div class="compras-filtros">
+
+        <h2>🏢 Fornecedores</h2>
+
+        <input
+            type="text"
+            id="filtro-fornecedor"
+            placeholder="Pesquisar fornecedor">
+
+    </div>
+
+    <!-- FORM -->
+    <div class="compras-form">
+
+        <h3>Novo Fornecedor</h3>
+
+        <input
+            type="text"
+            id="nome"
+            placeholder="Nome">
+
+        <input
+            type="text"
+            id="telefone"
+            placeholder="Telefone">
+
+        <input
+            type="email"
+            id="email"
+            placeholder="Email">
+
+        <input
+            type="text"
+            id="documento"
+            placeholder="NUIT / Documento">
+
+        <textarea
+            id="endereco"
+            placeholder="Endereço"></textarea>
+
+        <button onclick="salvarFornecedor()">
+            💾 Guardar Fornecedor
+        </button>
+
+    </div>
+
+    <!-- TABELA -->
+    <div class="compras-tabela">
+
+        <table>
+
+            <thead>
+                <tr>
+                    <th>Nome</th>
+                    <th>Telefone</th>
+                    <th>Email</th>
+                </tr>
+            </thead>
+
+            <tbody id="tbody-fornecedores">
+
+                {% for f in fornecedores %}
+
+                <tr
+                    ondblclick="abrirFornecedor('{{f[0]}}')"
+                    data-nome="{{f[1]|lower}}">
+
+                    <td>{{f[1]}}</td>
+                    <td>{{f[2]}}</td>
+                    <td>{{f[3]}}</td>
+
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+<!-- MODAL -->
+<div id="modalFornecedor" class="modal">
+
+    <div class="modal-content">
+
+        <h3>Fornecedor</h3>
+
+        <div id="detalhesFornecedor"></div>
+
+        <button onclick="fecharFornecedor()">
+            Fechar
+        </button>
+
+    </div>
+
+</div>
+
+<script>
+
+function salvarFornecedor(){
+
+    fetch("/api/fornecedores",{
+        method:"POST",
+        headers:{
+            "Content-Type":"application/json"
+        },
+        body:JSON.stringify({
+
+            nome:
+                document.getElementById("nome").value,
+
+            telefone:
+                document.getElementById("telefone").value,
+
+            email:
+                document.getElementById("email").value,
+
+            endereco:
+                document.getElementById("endereco").value,
+
+            documento:
+                document.getElementById("documento").value
+        })
+    })
+    .then(r=>r.json())
+    .then(d=>{
+
+        if(d.status==="ok"){
+
+            alert("Fornecedor registado");
+
+            location.reload();
+
+        }else{
+
+            alert(d.error);
+        }
+
+    });
+}
+
+function abrirFornecedor(id){
+
+    fetch("/api/fornecedor/"+id)
+    .then(r=>r.json())
+    .then(d=>{
+
+        document.getElementById("detalhesFornecedor").innerHTML = `
+            <p><b>Nome:</b> ${d.nome}</p>
+            <p><b>Telefone:</b> ${d.telefone || ""}</p>
+            <p><b>Email:</b> ${d.email || ""}</p>
+            <p><b>Documento:</b> ${d.documento || ""}</p>
+            <p><b>Endereço:</b> ${d.endereco || ""}</p>
+        `;
+
+        document.getElementById("modalFornecedor")
+            .style.display="flex";
+    });
+}
+
+function fecharFornecedor(){
+
+    document.getElementById("modalFornecedor")
+        .style.display="none";
+}
+
+document.getElementById("filtro-fornecedor")
+.addEventListener("keyup", function(){
+
+    let filtro = this.value.toLowerCase();
+
+    document.querySelectorAll(
+        "#tbody-fornecedores tr"
+    ).forEach(linha=>{
+
+        linha.style.display =
+            linha.dataset.nome.includes(filtro)
+            ? ""
+            : "none";
+    });
+});
+
+</script>
+
+{% endblock %}
