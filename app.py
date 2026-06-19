@@ -2495,165 +2495,114 @@ def salvar_compra():
     cur = None
 
     try:
-        print("\n========== COMPRA DEBUG ==========")
+
         dados = request.json
-        print("RAW:", dados)
 
-        empresa_id = session.get("empresa_id")
-        if not empresa_id:
-            return jsonify({"error": "NAO AUTENTICADO"}), 401
+        print("\n========== COMPRA SYNC ==========")
+        print(dados)
 
-        itens = dados.get("itens", [])
+        token = dados.get("token")
 
-        if not isinstance(itens, list) or len(itens) == 0:
-            return jsonify({"error": "Nenhum item na compra"}), 400
+        if not token:
+            return jsonify({
+                "error": "TOKEN FALTANDO"
+            }), 401
 
-        fornecedor = dados.get("fornecedor")
-        armazem_uuid = dados.get("armazem_uuid")
+        empresa = obter_empresa_por_token(token)
+
+        if not empresa:
+            return jsonify({
+                "error": "TOKEN INVALIDO"
+            }), 401
+
+        empresa_id = empresa[0]
+
+        compra_uuid = dados.get("uuid")
+
+        if not compra_uuid:
+            compra_uuid = str(uuid.uuid4())
 
         conn = conectar()
         cur = conn.cursor()
 
-        # ================= EMPRESA =================
-        cur.execute("SELECT nome FROM empresa WHERE id=%s", (empresa_id,))
-        empresa = cur.fetchone()
-        nome_empresa = empresa[0] if empresa else ""
+        cur.execute("""
+            SELECT id
+            FROM compras
+            WHERE uuid=%s
+            AND empresa_id=%s
+        """, (
+            compra_uuid,
+            empresa_id
+        ))
 
-        # ================= REGISTRO =================
-        cur.execute("SELECT COALESCE(MAX(registro_id),0)+1 FROM compras")
-        registro_id = cur.fetchone()[0]
-        numero_fatura = f"CMP-{registro_id}"
+        existe = cur.fetchone()
 
-        # ================= LOOP ITENS =================
-        for item in itens:
+        if existe:
 
-            print("ITEM:", item)
+            return jsonify({
+                "status": "existe",
+                "id": existe[0]
+            })
 
-            produto_uuid = item.get("produto_uuid")
-
-            if not produto_uuid:
-                print("❌ ITEM SEM produto_uuid:", item)
-                continue
-
-            try:
-                quantidade = Decimal(str(item.get("quantidade", 0)))
-                valor_unit = Decimal(str(item.get("valor_unit", 0)))
-            except:
-                continue
-
-            valor_total = quantidade * valor_unit
-
-            # produto
-            cur.execute("""
-                SELECT id FROM produtos
-                WHERE uuid=%s AND empresa_id=%s
-            """, (produto_uuid, empresa_id))
-
-            prod = cur.fetchone()
-
-            if not prod:
-                print("❌ PRODUTO NÃO ENCONTRADO:", produto_uuid)
-                continue
-
-            produto_id = prod[0]
-
-            # armazem
-            cur.execute("""
-                SELECT local FROM armazem
-                WHERE uuid=%s AND empresa_id=%s
-            """, (armazem_uuid, empresa_id))
-
-            arm = cur.fetchone()
-
-            if not arm:
-                return jsonify({"error": "Armazém inválido"}), 400
-
-            local_nome = arm[0]
-
-            # ================= INSERT COMPRA =================
-            cur.execute("""
-                INSERT INTO compras (
-                    fornecedor,
-                    produto,
-                    produto_uuid,
-                    valor_unit,
-                    valor_total,
-                    quantidade,
-                    local,
-                    data,
-                    usuario_logado,
-                    pago,
-                    pagamento,
-                    registro_id,
-                    numero_fatura,
-                    empresa_id,
-                    uuid,
-                    armazem_uuid
-                )
-                VALUES (
-                    %s,%s,%s,%s,%s,%s,%s,
-                    CURRENT_DATE,
-                    %s,
-                    'Sim',
-                    'Pronto Pagamento',
-                    %s,%s,%s,%s,%s
-                )
-            """, (
+        cur.execute("""
+            INSERT INTO compras
+            (
+                uuid,
+                empresa_id,
                 fornecedor,
-                produto_id,
-                produto_uuid,   # 🔥 GARANTIDO AQUI
+                fornecedor_uuid,
+                produto,
+                produto_uuid,
+                quantidade,
                 valor_unit,
                 valor_total,
-                quantidade,
-                local_nome,
-                nome_empresa,
-                registro_id,
-                numero_fatura,
-                empresa_id,
-                str(uuid.uuid4()),
-                armazem_uuid
-            ))
-
-            # ================= STOCK =================
-            cur.execute("""
-                INSERT INTO stock (
-                    produto,
-                    produto_uuid,
-                    armazem_uuid,
-                    local,
-                    quantidade,
-                    tipo_movimentacao,
-                    uuid,
-                    data,
-                    ultima_atualizacao,
-                    empresa_id
-                )
-                VALUES (
-                    %s,%s,%s,%s,%s,
-                    'compra',
-                    %s,
-                    NOW(),
-                    NOW(),
-                    %s
-                )
-            """, (
-                produto_id,
-                produto_uuid,
+                local,
                 armazem_uuid,
-                local_nome,
-                quantidade,
-                str(uuid.uuid4()),
-                empresa_id
-            ))
+                data,
+                usuario_logado,
+                pago,
+                pagamento,
+                tipo_fatura,
+                numero_fatura,
+                registro_id
+            )
+            VALUES
+            (
+                %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,
+                %s,%s,%s,%s,%s,%s,%s,%s
+            )
+            RETURNING id
+        """, (
+            compra_uuid,
+            empresa_id,
+            dados.get("fornecedor"),
+            dados.get("fornecedor_uuid"),
+            dados.get("produto"),
+            dados.get("produto_uuid"),
+            float(dados.get("quantidade", 0)),
+            float(dados.get("valor_unit", 0)),
+            float(dados.get("valor_total", 0)),
+            dados.get("local"),
+            dados.get("armazem_uuid"),
+            dados.get("data"),
+            dados.get("usuario_logado"),
+            dados.get("pago"),
+            dados.get("pagamento"),
+            dados.get("tipo_fatura"),
+            dados.get("numero_fatura"),
+            dados.get("registro_id")
+        ))
+
+        compra_id = cur.fetchone()[0]
 
         conn.commit()
 
-        print("✔ COMPRA OK")
+        print("✔ COMPRA INSERIDA:", compra_id)
 
         return jsonify({
             "status": "ok",
-            "registro_id": registro_id,
-            "numero_fatura": numero_fatura
+            "id": compra_id,
+            "uuid": compra_uuid
         })
 
     except Exception as e:
@@ -2663,11 +2612,15 @@ def salvar_compra():
 
         print("❌ ERRO COMPRA:", repr(e))
 
-        return jsonify({"error": str(e)}), 500
+        return jsonify({
+            "error": str(e)
+        }), 500
 
     finally:
+
         if cur:
             cur.close()
+
         if conn:
             conn.close()
 
@@ -3200,14 +3153,22 @@ def api_compras_get():
         cur.execute("""
             SELECT
                 uuid,
-                registro_id,
-                numero_fatura,
                 fornecedor,
+                fornecedor_uuid,
                 produto,
+                produto_uuid,
                 quantidade,
                 valor_unit,
                 valor_total,
-                armazem_uuid
+                local,
+                armazem_uuid,
+                data,
+                usuario_logado,
+                pago,
+                pagamento,
+                tipo_fatura,
+                numero_fatura,
+                registro_id
             FROM compras
             WHERE empresa_id=%s
         """, (empresa_id,))
@@ -3220,21 +3181,31 @@ def api_compras_get():
         return jsonify([
             {
                 "uuid": r[0],
-                "registro_id": r[1],
-                "numero_fatura": r[2],
-                "fornecedor": r[3],
-                "produto": r[4],
-                "quantidade": r[5],
-                "valor_unit": r[6],
-                "valor_total": r[7],
-                "armazem_uuid": r[8]
+                "fornecedor": r[1],
+                "fornecedor_uuid": r[2],
+                "produto": r[3],
+                "produto_uuid": r[4],
+                "quantidade": float(r[5] or 0),
+                "valor_unit": float(r[6] or 0),
+                "valor_total": float(r[7] or 0),
+                "local": r[8],
+                "armazem_uuid": r[9],
+                "data": str(r[10]) if r[10] else None,
+                "usuario_logado": r[11],
+                "pago": r[12],
+                "pagamento": r[13],
+                "tipo_fatura": r[14],
+                "numero_fatura": r[15],
+                "registro_id": r[16]
             }
             for r in dados
         ])
 
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
+        return jsonify({
+            "error": str(e)
+        }), 500
 
 from flask import session, request, redirect
 @app.before_request
