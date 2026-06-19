@@ -3265,6 +3265,7 @@ def proteger_rotas():
         "api_fornecedores_get",
         "api_compras_get",
         "api_compras",
+        "salvar_compra",
     ]
 
     if request.endpoint in rotas_livres:
