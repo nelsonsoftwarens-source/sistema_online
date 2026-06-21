@@ -2459,18 +2459,23 @@ def compras():
     cur.execute("""
         SELECT
             c.registro_id,
-            f.nome,
+            COALESCE(f.nome, 'SEM FORNECEDOR'),
             c.data,
             SUM(c.valor_total)
         FROM compras c
+
         LEFT JOIN fornecedores f
-            ON f.id=c.fornecedor
+            ON f.uuid = c.fornecedor_uuid
+
+        WHERE c.empresa_id=%s
+
         GROUP BY
             c.registro_id,
             f.nome,
             c.data
+
         ORDER BY c.registro_id DESC
-    """)
+    """, (session["empresa_id"],))
 
     compras = cur.fetchall()
 
@@ -2625,16 +2630,25 @@ def detalhe_compra(registro_id):
 
     cur.execute("""
         SELECT
-            p.descricao,
+            COALESCE(p.descricao, 'PRODUTO NÃO ENCONTRADO'),
             c.quantidade,
             c.valor_unit,
             c.valor_total,
-            c.local
+            a.local
         FROM compras c
-        JOIN produtos p
-            ON p.id=c.produto
+
+        LEFT JOIN produtos p
+            ON p.uuid = c.produto_uuid
+
+        LEFT JOIN armazem a
+            ON a.uuid = c.armazem_uuid
+
         WHERE c.registro_id=%s
-    """,(registro_id,))
+        AND c.empresa_id=%s
+    """, (
+        registro_id,
+        session["empresa_id"]
+    ))
 
     dados = cur.fetchall()
 
