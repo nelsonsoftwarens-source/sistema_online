@@ -2894,25 +2894,27 @@ def api_compras():
 
     try:
 
-        dados = request.get_json(silent=True)
-
-        print("DADOS RECEBIDOS:")
-        print(dados)
-
-        if not dados:
-            return jsonify({"error": "JSON INVALIDO"}), 400
+        dados = request.get_json(silent=True) or {}
 
         token = dados.get("token")
 
-        print("TOKEN:", token)
-
         if not token:
-            return jsonify({"error": "TOKEN FALTANDO"}), 401
 
-        empresa = obter_empresa_por_token(token)
+            # usuário logado pelo navegador
+            if "empresa_id" in session:
+                empresa_id = session["empresa_id"]
 
-        if not empresa:
-            return jsonify({"error": "TOKEN INVALIDO"}), 401
+            else:
+                return jsonify({"error": "TOKEN FALTANDO"}), 401
+
+        else:
+
+            empresa = obter_empresa_por_token(token)
+
+            if not empresa:
+                return jsonify({"error": "TOKEN INVALIDO"}), 401
+
+            empresa_id = empresa[0]
 
         empresa_id = empresa[0]
 
