@@ -2900,17 +2900,12 @@ def api_compras():
 
         token = dados.get("token")
 
-        # =====================================
-        # EMPRESA (TOKEN OU SESSÃO WEB)
-        # =====================================
-        if not token:
+        empresa_id = None
 
-            if "empresa_id" in session:
-                empresa_id = session["empresa_id"]
-            else:
-                return jsonify({"error": "TOKEN FALTANDO"}), 401
-
-        else:
+        # =========================
+        # CASO PDV (TOKEN)
+        # =========================
+        if token:
 
             empresa = obter_empresa_por_token(token)
 
@@ -2918,6 +2913,21 @@ def api_compras():
                 return jsonify({"error": "TOKEN INVALIDO"}), 401
 
             empresa_id = empresa[0]
+
+        # =========================
+        # CASO WEB (SESSION)
+        # =========================
+        elif "empresa_id" in session:
+
+            empresa_id = session["empresa_id"]
+
+        # =========================
+        # SEM AUTENTICAÇÃO
+        # =========================
+        else:
+            return jsonify({"error": "NAO AUTENTICADO"}), 401
+
+        empresa_id = empresa[0]
 
         print("EMPRESA_ID:", empresa_id)
 
