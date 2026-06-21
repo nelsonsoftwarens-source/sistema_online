@@ -2998,7 +2998,6 @@ def api_fornecedor(id):
 
 from flask import request, jsonify
 import uuid
-
 @app.route("/api/compras", methods=["POST"])
 def api_compras():
 
@@ -3010,11 +3009,8 @@ def api_compras():
         dados = request.json
 
         print("\n========== COMPRA SYNC ==========")
-        print("DADOS:", dados)
+        print(dados)
 
-        # =========================
-        # TOKEN OBRIGATÓRIO
-        # =========================
         token = dados.get("token")
 
         if not token:
@@ -3027,77 +3023,114 @@ def api_compras():
 
         empresa_id = empresa[0]
 
-        # =========================
-        # DADOS
-        # =========================
         compra_uuid = dados.get("uuid") or str(uuid.uuid4())
-
-        registro_id = dados.get("registro_id")
-        numero_fatura = dados.get("numero_fatura")
-
-        fornecedor = dados.get("fornecedor")
-        produto = dados.get("produto")
-
-        quantidade = dados.get("quantidade")
-        valor_unit = dados.get("valor_unit")
-        valor_total = dados.get("valor_total")
-
-        armazem_uuid = dados.get("armazem_uuid")
 
         conn = conectar()
         cur = conn.cursor()
 
-        # =========================
-        # CHECK DUPLICADO
-        # =========================
         cur.execute("""
             SELECT id
             FROM compras
             WHERE uuid=%s
             AND empresa_id=%s
-        """, (compra_uuid, empresa_id))
+        """, (
+            compra_uuid,
+            empresa_id
+        ))
 
         existe = cur.fetchone()
 
         if existe:
-            print("✔ COMPRA JÁ EXISTE:", compra_uuid)
+
+            print("⏩ COMPRA JÁ EXISTE")
 
             return jsonify({
                 "status": "existe",
-                "id": existe[0],
                 "uuid": compra_uuid
             })
 
-        # =========================
-        # INSERT
-        # =========================
+        registro_id = dados.get("registro_id")
+        numero_fatura = dados.get("numero_fatura")
+
+        fornecedor = dados.get("fornecedor")
+        fornecedor_uuid = dados.get("fornecedor_uuid")
+
+        produto = dados.get("produto")
+        produto_uuid = dados.get("produto_uuid")
+
+        quantidade = dados.get("quantidade", 0)
+        valor_unit = dados.get("valor_unit", 0)
+        valor_total = dados.get("valor_total", 0)
+
+        armazem_uuid = dados.get("armazem_uuid")
+
+        data = dados.get("data")
+
+        usuario_logado = dados.get("usuario_logado")
+        pago = dados.get("pago")
+        pagamento = dados.get("pagamento")
+        tipo_fatura = dados.get("tipo_fatura")
+
         cur.execute("""
             INSERT INTO compras
             (
                 uuid,
                 registro_id,
                 numero_fatura,
+
                 fornecedor,
+                fornecedor_uuid,
+
                 produto,
+                produto_uuid,
+
                 quantidade,
                 valor_unit,
                 valor_total,
+
                 armazem_uuid,
-                empresa_id,
-                data
+
+                data,
+                usuario_logado,
+                pago,
+                pagamento,
+                tipo_fatura,
+
+                empresa_id
             )
             VALUES
-            (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,CURRENT_DATE)
+            (
+                %s,%s,%s,
+                %s,%s,
+                %s,%s,
+                %s,%s,%s,
+                %s,
+                %s,%s,%s,%s,%s,
+                %s
+            )
         """, (
             compra_uuid,
             registro_id,
             numero_fatura,
+
             fornecedor,
+            fornecedor_uuid,
+
             produto,
+            produto_uuid,
+
             quantidade,
             valor_unit,
             valor_total,
+
             armazem_uuid,
+
+            data,
+            usuario_logado,
+            pago,
+            pagamento,
+            tipo_fatura,
+
             empresa_id
         ))
 
@@ -3121,10 +3154,15 @@ def api_compras():
 
     finally:
 
-        if cur:
+        try:
             cur.close()
-        if conn:
+        except:
+            pass
+
+        try:
             conn.close()
+        except:
+            pass
 
 @app.route("/api/compras", methods=["GET"])
 def api_compras_get():
@@ -3162,8 +3200,8 @@ def api_compras_get():
                 valor_unit,
                 valor_total,
 
-                local,
                 armazem_uuid,
+
                 data,
                 usuario_logado,
                 pago,
@@ -3190,19 +3228,18 @@ def api_compras_get():
                 "produto": r[5],
                 "produto_uuid": r[6],
 
-                "quantidade": float(r[7]) if r[7] is not None else 0,
-                "valor_unit": float(r[8]) if r[8] is not None else 0,
-                "valor_total": float(r[9]) if r[9] is not None else 0,
+                "quantidade": float(r[7] or 0),
+                "valor_unit": float(r[8] or 0),
+                "valor_total": float(r[9] or 0),
 
-                "local": r[10],
-                "armazem_uuid": r[11],
+                "armazem_uuid": r[10],
 
-                "data": str(r[12]) if r[12] else None,
+                "data": str(r[11]) if r[11] else None,
 
-                "usuario_logado": r[13],
-                "pago": r[14],
-                "pagamento": r[15],
-                "tipo_fatura": r[16]
+                "usuario_logado": r[12],
+                "pago": r[13],
+                "pagamento": r[14],
+                "tipo_fatura": r[15]
             })
 
         cur.close()
@@ -3213,7 +3250,6 @@ def api_compras_get():
     except Exception as e:
 
         print("ERRO GET COMPRAS:", repr(e))
-
         return jsonify([])
 
 from flask import session, request, redirect
