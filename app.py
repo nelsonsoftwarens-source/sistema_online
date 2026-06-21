@@ -2495,7 +2495,7 @@ import uuid
 from flask import request, jsonify, session
 @app.route("/api/compras", methods=["POST"])
 def salvar_compra():
-
+    print("ENTROU EM SALVAR_COMPRA")
     conn = None
     cur = None
 
@@ -3014,6 +3014,7 @@ from flask import request, jsonify
 import uuid
 @app.route("/api/compras", methods=["POST"])
 def api_compras():
+    print("ENTROU EM API_COMPRA")
 
     conn = None
     cur = None
