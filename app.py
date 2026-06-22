@@ -2835,105 +2835,172 @@ def compras():
         compras=compras
     )
 
-from decimal import Decimal
-import uuid
-from flask import request, jsonify, session
-@app.route("/api/compras", methods=["POST"])
-def salvar_compra():
+@app.route("/api/compra/<int:registro_id>")
+def detalhe_compra(registro_id):
 
-    print("\n========== SALVAR COMPRA ==========")
+    conn = conectar()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT
+            COALESCE(p.descricao, 'PRODUTO NÃO ENCONTRADO'),
+            c.quantidade,
+            c.valor_unit,
+            c.valor_total,
+            a.local
+        FROM compras c
+
+        LEFT JOIN produtos p
+            ON p.uuid = c.produto_uuid
+
+        LEFT JOIN armazem a
+            ON a.uuid = c.armazem_uuid
+
+        WHERE c.registro_id=%s
+        AND c.empresa_id=%s
+    """, (
+        registro_id,
+        session["empresa_id"]
+    ))
+
+    dados = cur.fetchall()
+
+    cur.close()
+    conn.close()
+
+    return jsonify([
+        {
+            "produto":r[0],
+            "quantidade":float(r[1]),
+            "valor_unit":float(r[2]),
+            "valor_total":float(r[3]),
+            "armazem":r[4]
+        }
+        for r in dados
+    ])
+
+
+from flask import request, jsonify
+import uuid
+@app.route("/api/compras", methods=["POST"])
+@app.route("/api/compras", methods=["POST"])
+def api_compras():
 
     conn = None
     cur = None
 
     try:
 
+        print("\n========== CADASTRO COMPRA LOCAL ==========")
+
         dados = request.get_json(silent=True) or {}
-        print("DADOS RECEBIDOS:", dados)
+
+        # =========================
+        # DEBUG TOTAL (MUITO IMPORTANTE)
+        # =========================
+        print("RAW REQUEST JSON:")
+        print(dados)
+
+        print("\nTIPO DE DADOS:")
+        print(type(dados))
+
+        print("\nCHAVES RECEBIDAS:")
+        print(list(dados.keys()))
 
         # =========================
         # EMPRESA
         # =========================
         empresa_id = session.get("empresa_id")
 
+        print("\nEMPRESA_ID SESSION:", empresa_id)
+
         if not empresa_id:
             return jsonify({"error": "NAO AUTENTICADO"}), 401
 
         # =========================
-        # UUID COMPRA
-        # =========================
-        compra_uuid = dados.get("uuid") or str(uuid.uuid4())
-
-        # =========================
-        # CAMPOS FRONTEND
+        # DADOS FRONTEND (DEBUG INDIVIDUAL)
         # =========================
         fornecedor_id = dados.get("fornecedor")
         produto_uuid = dados.get("produto_uuid")
         armazem_uuid = dados.get("armazem_uuid")
 
-        quantidade = float(dados.get("quantidade") or 0)
-        valor_unit = float(dados.get("valor_unit") or 0)
-        valor_total = float(dados.get("valor_total") or 0)
+        quantidade = dados.get("quantidade")
+        valor_unit = dados.get("valor_unit")
+        valor_total = dados.get("valor_total")
+
+        print("\n========== CAMPOS EXTRAIDOS ==========")
+        print("fornecedor_id:", fornecedor_id)
+        print("produto_uuid:", produto_uuid)
+        print("armazem_uuid:", armazem_uuid)
+        print("quantidade:", quantidade)
+        print("valor_unit:", valor_unit)
+        print("valor_total:", valor_total)
 
         # =========================
-        # DEBUG IMPORTANTE
+        # VALIDAÇÕES
         # =========================
-        print("\nFORNECEDOR:", fornecedor_id)
-        print("PRODUTO UUID:", produto_uuid)
-        print("ARMAZEM UUID:", armazem_uuid)
-
         if not fornecedor_id:
             return jsonify({"error": "Fornecedor obrigatório"}), 400
 
         if not produto_uuid:
+            print("❌ PRODUTO UUID NÃO CHEGOU")
             return jsonify({"error": "Produto obrigatório"}), 400
 
         if not armazem_uuid:
             return jsonify({"error": "Armazém obrigatório"}), 400
 
+        # =========================
+        # UUID COMPRA
+        # =========================
+        compra_uuid = str(uuid.uuid4())
+
         conn = conectar()
         cur = conn.cursor()
 
         # =========================
-        # BUSCAR FORNECEDOR UUID
+        # FORNECEDOR UUID
         # =========================
         cur.execute("""
             SELECT uuid
             FROM fornecedores
             WHERE id=%s
         """, (fornecedor_id,))
-        fornecedor_uuid = cur.fetchone()
-        fornecedor_uuid = fornecedor_uuid[0] if fornecedor_uuid else None
+
+        r = cur.fetchone()
+        fornecedor_uuid = r[0] if r else None
+
+        print("\nFORNECEDOR UUID:", fornecedor_uuid)
 
         # =========================
-        # BUSCAR PRODUTO ID
+        # PRODUTO ID
         # =========================
         cur.execute("""
             SELECT id
             FROM produtos
             WHERE uuid=%s
         """, (produto_uuid,))
-        produto_id = cur.fetchone()
-        produto_id = produto_id[0] if produto_id else None
+
+        r = cur.fetchone()
+        produto_id = r[0] if r else None
+
+        print("PRODUTO ID:", produto_id)
 
         # =========================
-        # BUSCAR ARMAZEM LOCAL
+        # ARMAZEM LOCAL
         # =========================
         cur.execute("""
             SELECT local
             FROM armazem
             WHERE uuid=%s
         """, (armazem_uuid,))
-        local = cur.fetchone()
-        local = local[0] if local else None
 
-        print("\nRESOLVIDO:")
-        print("fornecedor_uuid:", fornecedor_uuid)
-        print("produto_id:", produto_id)
-        print("local:", local)
+        r = cur.fetchone()
+        local = r[0] if r else None
+
+        print("ARMAZEM LOCAL:", local)
 
         # =========================
-        # INSERT (SEGURO)
+        # INSERT
         # =========================
         cur.execute("""
             INSERT INTO compras (
@@ -2992,7 +3059,7 @@ def salvar_compra():
 
         conn.commit()
 
-        print("✔ COMPRA SALVA:", compra_id)
+        print("\n✔ COMPRA SALVA COM SUCESSO:", compra_id)
 
         return jsonify({
             "status": "ok",
@@ -3005,232 +3072,24 @@ def salvar_compra():
         if conn:
             conn.rollback()
 
-        print("❌ ERRO:", repr(e))
-
-        return jsonify({"error": str(e)}), 500
-
-    finally:
-
-        if cur:
-            cur.close()
-
-        if conn:
-            conn.close()
-
-@app.route("/api/compra/<int:registro_id>")
-def detalhe_compra(registro_id):
-
-    conn = conectar()
-    cur = conn.cursor()
-
-    cur.execute("""
-        SELECT
-            COALESCE(p.descricao, 'PRODUTO NÃO ENCONTRADO'),
-            c.quantidade,
-            c.valor_unit,
-            c.valor_total,
-            a.local
-        FROM compras c
-
-        LEFT JOIN produtos p
-            ON p.uuid = c.produto_uuid
-
-        LEFT JOIN armazem a
-            ON a.uuid = c.armazem_uuid
-
-        WHERE c.registro_id=%s
-        AND c.empresa_id=%s
-    """, (
-        registro_id,
-        session["empresa_id"]
-    ))
-
-    dados = cur.fetchall()
-
-    cur.close()
-    conn.close()
-
-    return jsonify([
-        {
-            "produto":r[0],
-            "quantidade":float(r[1]),
-            "valor_unit":float(r[2]),
-            "valor_total":float(r[3]),
-            "armazem":r[4]
-        }
-        for r in dados
-    ])
-
-
-from flask import request, jsonify
-import uuid
-@app.route("/api/compras", methods=["POST"])
-def api_compras():
-    print("ENTROU EM API_COMPRA")
-
-    conn = None
-    cur = None
-
-    try:
-
-        dados = request.json
-
-        print("\n========== COMPRA SYNC ==========")
-        print(dados)
-
-        token = dados.get("token")
-
-        if not token:
-            return jsonify({"error": "TOKEN FALTANDO"}), 401
-
-        empresa = obter_empresa_por_token(token)
-
-        if not empresa:
-            return jsonify({"error": "TOKEN INVALIDO"}), 401
-
-        empresa_id = empresa[0]
-
-        compra_uuid = dados.get("uuid") or str(uuid.uuid4())
-
-        conn = conectar()
-        cur = conn.cursor()
-
-        cur.execute("""
-            SELECT id
-            FROM compras
-            WHERE uuid=%s
-            AND empresa_id=%s
-        """, (
-            compra_uuid,
-            empresa_id
-        ))
-
-        existe = cur.fetchone()
-
-        if existe:
-
-            print("⏩ COMPRA JÁ EXISTE")
-
-            return jsonify({
-                "status": "existe",
-                "uuid": compra_uuid
-            })
-
-        registro_id = dados.get("registro_id")
-        numero_fatura = dados.get("numero_fatura")
-
-        fornecedor = dados.get("fornecedor")
-        fornecedor_uuid = dados.get("fornecedor_uuid")
-
-        produto = dados.get("produto")
-        produto_uuid = dados.get("produto_uuid")
-
-        quantidade = dados.get("quantidade", 0)
-        valor_unit = dados.get("valor_unit", 0)
-        valor_total = dados.get("valor_total", 0)
-
-        armazem_uuid = dados.get("armazem_uuid")
-
-        data = dados.get("data")
-
-        usuario_logado = dados.get("usuario_logado")
-        pago = dados.get("pago")
-        pagamento = dados.get("pagamento")
-        tipo_fatura = dados.get("tipo_fatura")
-
-        cur.execute("""
-            INSERT INTO compras
-            (
-                uuid,
-                registro_id,
-                numero_fatura,
-
-                fornecedor,
-                fornecedor_uuid,
-
-                produto,
-                produto_uuid,
-
-                quantidade,
-                valor_unit,
-                valor_total,
-
-                armazem_uuid,
-
-                data,
-                usuario_logado,
-                pago,
-                pagamento,
-                tipo_fatura,
-
-                empresa_id
-            )
-            VALUES
-            (
-                %s,%s,%s,
-                %s,%s,
-                %s,%s,
-                %s,%s,%s,
-                %s,
-                %s,%s,%s,%s,%s,
-                %s
-            )
-        """, (
-            compra_uuid,
-            registro_id,
-            numero_fatura,
-
-            fornecedor,
-            fornecedor_uuid,
-
-            produto,
-            produto_uuid,
-
-            quantidade,
-            valor_unit,
-            valor_total,
-
-            armazem_uuid,
-
-            data,
-            usuario_logado,
-            pago,
-            pagamento,
-            tipo_fatura,
-
-            empresa_id
-        ))
-
-        conn.commit()
-
-        print("✔ COMPRA INSERIDA ONLINE")
-
-        return jsonify({
-            "status": "ok",
-            "uuid": compra_uuid
-        })
-
-    except Exception as e:
-
-        if conn:
-            conn.rollback()
-
-        print("❌ ERRO COMPRA:", repr(e))
+        print("\n❌ ERRO COMPLETO:", repr(e))
 
         return jsonify({"error": str(e)}), 500
 
     finally:
 
         try:
-            cur.close()
+            if cur:
+                cur.close()
         except:
             pass
 
         try:
-            conn.close()
+            if conn:
+                conn.close()
         except:
             pass
-
+        
 @app.route("/api/compras", methods=["GET"])
 def api_compras_get():
 
