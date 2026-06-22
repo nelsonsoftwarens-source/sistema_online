@@ -328,87 +328,156 @@ function salvarCompra(){
     let fornecedor = document.getElementById("fornecedor").value;
     let produto_uuid = document.getElementById("produto").value;
     let armazem_uuid = document.getElementById("armazem").value;
-    let quantidade = document.getElementById("quantidade").value;
-    let valor_unit = document.getElementById("valor_unit").value;
-    let valor_total = document.getElementById("valor_total").value;
+    let quantidade = parseFloat(document.getElementById("quantidade").value || 0);
+    let valor_unit = parseFloat(document.getElementById("valor_unit").value || 0);
+    let valor_total = parseFloat(document.getElementById("valor_total").value || 0);
 
-    console.log({
-        fornecedor,
-        produto_uuid,
-        armazem_uuid,
-        quantidade,
-        valor_unit,
-        valor_total
-    });
+    console.log("========== COMPRA ==========");
+    console.log("Fornecedor:", fornecedor);
+    console.log("Produto UUID:", produto_uuid);
+    console.log("Armazem UUID:", armazem_uuid);
+    console.log("Quantidade:", quantidade);
+    console.log("Valor Unit:", valor_unit);
+    console.log("Valor Total:", valor_total);
 
-    if(!fornecedor || !produto_uuid || !armazem_uuid){
-        alert("Preencha todos os campos obrigatórios");
+    if(!fornecedor){
+        alert("Selecione o fornecedor");
         return;
     }
+
+    if(!produto_uuid){
+        alert("Selecione o produto");
+        return;
+    }
+
+    if(!armazem_uuid){
+        alert("Selecione o armazém");
+        return;
+    }
+
+    const payload = {
+
+        fornecedor: fornecedor,
+
+        armazem_uuid: armazem_uuid,
+
+        itens: [
+            {
+                produto_uuid: produto_uuid,
+                quantidade: quantidade,
+                valor_unit: valor_unit,
+                valor_total: valor_total
+            }
+        ]
+
+    };
+
+    console.log("PAYLOAD:");
+    console.log(payload);
 
     fetch("/api/compras",{
         method:"POST",
         headers:{
             "Content-Type":"application/json"
         },
-        body: JSON.stringify({
-            fornecedor,
-            produto_uuid,
-            armazem_uuid,
-            quantidade,
-            valor_unit,
-            valor_total
-        })
+        body: JSON.stringify(payload)
     })
-    .then(r => r.json())
+    .then(async r => {
+
+        let dados = await r.json();
+
+        console.log("STATUS:", r.status);
+        console.log("RESPOSTA:", dados);
+
+        return dados;
+    })
     .then(d => {
 
         if(d.status === "ok"){
+
             alert("Compra registada com sucesso");
+
             location.reload();
+
         }else{
-            alert(d.error || "Erro");
+
+            alert(d.error || "Erro ao gravar compra");
+
         }
 
+    })
+    .catch(err => {
+
+        console.error("ERRO FETCH:", err);
+
+        alert("Erro de comunicação com o servidor");
+
     });
+
 }
 
-function abrirCompra(id){
+function abrirCompra(registro_id){
 
-    fetch("/api/compra/" + id)
-    .then(r => r.json())
+    console.log("ABRIR COMPRA:", registro_id);
+
+    fetch("/api/compra/" + registro_id)
+
+    .then(async r => {
+
+        let dados = await r.json();
+
+        console.log("DETALHES:", dados);
+
+        return dados;
+
+    })
+
     .then(dados => {
 
         let html = `
             <table style="width:100%;border-collapse:collapse;">
-                <tr>
-                    <th>Produto</th>
-                    <th>Qtd</th>
-                    <th>Valor Unit.</th>
-                    <th>Total</th>
-                    <th>Armazém</th>
-                </tr>
+                <thead>
+                    <tr>
+                        <th>Produto</th>
+                        <th>Qtd</th>
+                        <th>Valor Unit.</th>
+                        <th>Total</th>
+                        <th>Armazém</th>
+                    </tr>
+                </thead>
+                <tbody>
         `;
 
         dados.forEach(item => {
 
             html += `
                 <tr>
-                    <td>${item.produto}</td>
-                    <td>${item.quantidade}</td>
-                    <td>${item.valor_unit}</td>
-                    <td>${item.valor_total}</td>
-                    <td>${item.armazem}</td>
+                    <td>${item.produto || ""}</td>
+                    <td>${item.quantidade || 0}</td>
+                    <td>${item.valor_unit || 0}</td>
+                    <td>${item.valor_total || 0}</td>
+                    <td>${item.armazem || ""}</td>
                 </tr>
             `;
 
         });
 
-        html += "</table>";
+        html += `
+                </tbody>
+            </table>
+        `;
 
         document.getElementById("conteudoCompra").innerHTML = html;
 
         document.getElementById("modalCompra").style.display = "flex";
+
+    })
+
+    .catch(err => {
+
+        console.error("ERRO DETALHE COMPRA:", err);
+
+        alert("Erro ao carregar detalhes da compra");
 
     });
 
