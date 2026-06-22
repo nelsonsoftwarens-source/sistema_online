@@ -2882,6 +2882,9 @@ def detalhe_compra(registro_id):
 
 from flask import request, jsonify
 import uuid
+from datetime import date
+import uuid
+
 @app.route("/api/compras", methods=["POST"])
 def api_compras():
 
@@ -2906,9 +2909,28 @@ def api_compras():
         armazem_uuid = dados.get("armazem_uuid")
         itens = dados.get("itens", [])
 
+        # =========================
+        # CAMPOS OPCIONAIS
+        # =========================
+        usuario_logado = session.get("nome")
+
+        pago = dados.get("pago", False)
+        pagamento = dados.get("pagamento", "PENDENTE")
+        tipo_fatura = dados.get("tipo_fatura", "COMPRA")
+
+        registro_id = dados.get("registro_id")
+
+        if not registro_id:
+            registro_id = int(uuid.uuid4().int % 1000000)
+
+        numero_fatura = dados.get("numero_fatura")
+
+        if not numero_fatura:
+            numero_fatura = f"CMP-{registro_id}"
+
         print("FORNECEDOR:", fornecedor_id)
         print("ARMAZEM UUID:", armazem_uuid)
-        print("ITENS:", itens)
+        print("ITENS:", len(itens))
 
         if not fornecedor_id:
             return jsonify({"error": "Fornecedor obrigatório"}), 400
@@ -2922,9 +2944,9 @@ def api_compras():
         conn = conectar()
         cur = conn.cursor()
 
-        # =====================================
+        # =========================
         # FORNECEDOR UUID
-        # =====================================
+        # =========================
         cur.execute("""
             SELECT uuid
             FROM fornecedores
@@ -2940,9 +2962,9 @@ def api_compras():
 
         print("FORNECEDOR UUID:", fornecedor_uuid)
 
-        # =====================================
+        # =========================
         # ARMAZÉM
-        # =====================================
+        # =========================
         cur.execute("""
             SELECT local
             FROM armazem
@@ -2960,15 +2982,15 @@ def api_compras():
 
         compras_gravadas = []
 
-        # =====================================
-        # ITENS
-        # =====================================
+        # =========================
+        # GRAVAR ITENS
+        # =========================
         for item in itens:
 
             produto_uuid = item.get("produto_uuid")
-            quantidade = item.get("quantidade")
-            valor_unit = item.get("valor_unit")
-            valor_total = item.get("valor_total")
+            quantidade = item.get("quantidade", 0)
+            valor_unit = item.get("valor_unit", 0)
+            valor_total = item.get("valor_total", 0)
 
             print("\n========== ITEM ==========")
             print("produto_uuid:", produto_uuid)
@@ -2976,6 +2998,13 @@ def api_compras():
             print("valor_unit:", valor_unit)
             print("valor_total:", valor_total)
 
+            if not produto_uuid:
+                print("❌ ITEM IGNORADO - produto_uuid vazio")
+                continue
+
+            # =========================
+            # PRODUTO
+            # =========================
             cur.execute("""
                 SELECT id
                 FROM produtos
@@ -2985,13 +3014,20 @@ def api_compras():
             r = cur.fetchone()
 
             if not r:
-
                 print("❌ PRODUTO NÃO ENCONTRADO:", produto_uuid)
                 continue
 
             produto_id = r[0]
 
             compra_uuid = str(uuid.uuid4())
+
+            print("\n===== DADOS FINAIS =====")
+            print("registro_id:", registro_id)
+            print("numero_fatura:", numero_fatura)
+            print("usuario_logado:", usuario_logado)
+            print("pago:", pago)
+            print("pagamento:", pagamento)
+            print("tipo_fatura:", tipo_fatura)
 
             cur.execute("""
                 INSERT INTO compras (
@@ -3011,7 +3047,15 @@ def api_compras():
                     local,
                     armazem_uuid,
 
-                    data
+                    data,
+                    usuario_logado,
+
+                    pago,
+                    pagamento,
+                    tipo_fatura,
+
+                    numero_fatura,
+                    registro_id
                 )
                 VALUES (
                     %s,%s,
@@ -3024,7 +3068,11 @@ def api_compras():
 
                     %s,%s,
 
-                    CURRENT_DATE
+                    %s,%s,
+
+                    %s,%s,%s,
+
+                    %s,%s
                 )
                 RETURNING id
             """, (
@@ -3043,7 +3091,17 @@ def api_compras():
                 valor_total,
 
                 local,
-                armazem_uuid
+                armazem_uuid,
+
+                date.today(),
+                usuario_logado,
+
+                pago,
+                pagamento,
+                tipo_fatura,
+
+                numero_fatura,
+                registro_id
             ))
 
             compra_id = cur.fetchone()[0]
@@ -3061,6 +3119,8 @@ def api_compras():
 
         return jsonify({
             "status": "ok",
+            "registro_id": registro_id,
+            "numero_fatura": numero_fatura,
             "compras": compras_gravadas
         })
 
