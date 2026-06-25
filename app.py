@@ -3064,9 +3064,12 @@ def api_compras_get():
         empresa = obter_empresa_por_token(token)
 
         if not empresa:
+            print("TOKEN NÃO ENCONTRADO:", token)
             return jsonify([])
 
         empresa_id = empresa[0]
+
+        print("EMPRESA_ID:", empresa_id)
 
         conn = conectar()
         cur = conn.cursor()
