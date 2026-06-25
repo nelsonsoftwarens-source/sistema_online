@@ -3142,6 +3142,207 @@ def api_compras_get():
         print("ERRO GET COMPRAS:", repr(e))
         return jsonify([])
 
+@app.route("/api/salvar_compras", methods=["POST"])
+def api_salvar_compras():
+
+    print("\n========== API COMPRAS ==========")
+
+    conn = None
+    cur = None
+
+    try:
+
+        dados = request.get_json(silent=True) or {}
+
+        print("DADOS RECEBIDOS:")
+        print(dados)
+
+        token = dados.get("token")
+
+        # ==================================
+        # EMPRESA
+        # ==================================
+
+        if token:
+
+            empresa = obter_empresa_por_token(token)
+
+            if not empresa:
+                return jsonify({"error": "TOKEN INVALIDO"}), 401
+
+            empresa_id = empresa[0]
+
+        elif "empresa_id" in session:
+
+            empresa_id = session["empresa_id"]
+
+        else:
+
+            return jsonify({"error": "NAO AUTENTICADO"}), 401
+
+        print("EMPRESA_ID:", empresa_id)
+
+        # ==================================
+        # UUID
+        # ==================================
+
+        compra_uuid = dados.get("uuid") or str(uuid.uuid4())
+
+        conn = conectar()
+        cur = conn.cursor()
+
+        # ==================================
+        # DUPLICADO
+        # ==================================
+
+        cur.execute("""
+            SELECT id
+            FROM compras
+            WHERE uuid=%s
+            AND empresa_id=%s
+        """, (
+            compra_uuid,
+            empresa_id
+        ))
+
+        existe = cur.fetchone()
+
+        if existe:
+
+            print("⏩ COMPRA JÁ EXISTE:", compra_uuid)
+
+            return jsonify({
+                "status": "existe",
+                "id": existe[0],
+                "uuid": compra_uuid
+            })
+
+        # ==================================
+        # DEBUG CAMPOS
+        # ==================================
+
+        print("\n========== CAMPOS INSERT ==========")
+        print("fornecedor:", dados.get("fornecedor"))
+        print("fornecedor_uuid:", dados.get("fornecedor_uuid"))
+        print("produto:", dados.get("produto"))
+        print("produto_uuid:", dados.get("produto_uuid"))
+        print("quantidade:", dados.get("quantidade"))
+        print("valor_unit:", dados.get("valor_unit"))
+        print("valor_total:", dados.get("valor_total"))
+        print("local:", dados.get("local"))
+        print("armazem_uuid:", dados.get("armazem_uuid"))
+        print("data:", dados.get("data"))
+        print("usuario_logado:", dados.get("usuario_logado"))
+        print("pago:", dados.get("pago"))
+        print("pagamento:", dados.get("pagamento"))
+        print("tipo_fatura:", dados.get("tipo_fatura"))
+        print("numero_fatura:", dados.get("numero_fatura"))
+        print("registro_id:", dados.get("registro_id"))
+
+        # ==================================
+        # INSERT
+        # ==================================
+
+        cur.execute("""
+            INSERT INTO compras (
+                uuid,
+                empresa_id,
+                fornecedor,
+                fornecedor_uuid,
+                produto,
+                produto_uuid,
+                quantidade,
+                valor_unit,
+                valor_total,
+                local,
+                armazem_uuid,
+                data,
+                usuario_logado,
+                pago,
+                pagamento,
+                tipo_fatura,
+                numero_fatura,
+                registro_id
+            )
+            VALUES (
+                %s,%s,
+                %s,%s,
+                %s,%s,
+                %s,%s,%s,
+                %s,%s,
+                %s,%s,
+                %s,%s,%s,
+                %s,%s
+            )
+            RETURNING id
+        """, (
+
+            compra_uuid,
+            empresa_id,
+
+            dados.get("fornecedor"),
+            dados.get("fornecedor_uuid"),
+
+            dados.get("produto"),
+            dados.get("produto_uuid"),
+
+            dados.get("quantidade", 0),
+            dados.get("valor_unit", 0),
+            dados.get("valor_total", 0),
+
+            dados.get("local"),
+            dados.get("armazem_uuid"),
+
+            dados.get("data"),
+            dados.get("usuario_logado"),
+
+            dados.get("pago"),
+            dados.get("pagamento"),
+            dados.get("tipo_fatura"),
+
+            dados.get("numero_fatura"),
+            dados.get("registro_id")
+        ))
+
+        compra_id = cur.fetchone()[0]
+
+        conn.commit()
+
+        print("✔ COMPRA INSERIDA ONLINE")
+        print("ID:", compra_id)
+        print("UUID:", compra_uuid)
+
+        return jsonify({
+            "status": "ok",
+            "id": compra_id,
+            "uuid": compra_uuid
+        })
+
+    except Exception as e:
+
+        if conn:
+            conn.rollback()
+
+        print("❌ ERRO API_COMPRAS:", repr(e))
+
+        return jsonify({
+            "error": str(e)
+        }), 500
+
+    finally:
+
+        try:
+            if cur:
+                cur.close()
+        except:
+            pass
+
+        try:
+            if conn:
+                conn.close()
+        except:
+            pass
+
 from flask import session, request, redirect
 @app.before_request
 def proteger_rotas():

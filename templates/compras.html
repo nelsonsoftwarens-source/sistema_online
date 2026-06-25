@@ -375,7 +375,7 @@ function salvarCompra(){
     console.log("PAYLOAD:");
     console.log(payload);
 
-    fetch("/api/compras",{
+    fetch("/api/salvar_compras",{
         method:"POST",
         headers:{
             "Content-Type":"application/json"
@@ -656,7 +656,7 @@ function removerItem(i){
 
 function salvarCompra(){
 
-    fetch("/api/compras",{
+    fetch("/api/salvar_compras",{
         method:"POST",
         headers:{
             "Content-Type":"application/json"
