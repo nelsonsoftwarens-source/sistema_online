@@ -3054,6 +3054,10 @@ def api_compras_get():
 
         token = request.args.get("token")
 
+        print("\n========== API COMPRAS POST ==========")
+        print("TOKEN:", request.json.get("token"))
+        print("SESSION:", dict(session))
+
         if not token:
             return jsonify([])
 
