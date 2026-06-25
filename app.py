@@ -3142,112 +3142,208 @@ def api_compras_get():
         print("ERRO GET COMPRAS:", repr(e))
         return jsonify([])
 
+from datetime import date
+import uuid
+
 @app.route("/api/salvar_compras", methods=["POST"])
 def salvar_compras():
-
-    print("\n========== SALVAR COMPRA ==========")
 
     conn = None
     cur = None
 
     try:
 
-        dados = request.get_json(silent=True) or {}
-        print("DADOS RECEBIDOS:", dados)
+        print("\n========== CADASTRO COMPRA LOCAL ==========")
 
-        # =========================
-        # EMPRESA
-        # =========================
+        dados = request.get_json(silent=True) or {}
+
+        print("RAW REQUEST JSON:")
+        print(dados)
+
         empresa_id = session.get("empresa_id")
 
         if not empresa_id:
             return jsonify({"error": "NAO AUTENTICADO"}), 401
 
-        # =========================
-        # UUID COMPRA
-        # =========================
-        compra_uuid = dados.get("uuid") or str(uuid.uuid4())
-
-        # =========================
-        # CAMPOS FRONTEND
-        # =========================
         fornecedor_id = dados.get("fornecedor")
-        produto_uuid = dados.get("produto_uuid")
         armazem_uuid = dados.get("armazem_uuid")
-
-        quantidade = float(dados.get("quantidade") or 0)
-        valor_unit = float(dados.get("valor_unit") or 0)
-        valor_total = float(dados.get("valor_total") or 0)
+        itens = dados.get("itens", [])
 
         # =========================
-        # DEBUG IMPORTANTE
+        # CAMPOS OPCIONAIS
         # =========================
-        print("\nFORNECEDOR:", fornecedor_id)
-        print("PRODUTO UUID:", produto_uuid)
+        usuario_logado = session.get("nome")
+
+        pago = dados.get("pago", False)
+        pagamento = dados.get("pagamento", "PENDENTE")
+        tipo_fatura = dados.get("tipo_fatura", "COMPRA")
+
+        registro_id = dados.get("registro_id")
+
+        if not registro_id:
+            registro_id = int(uuid.uuid4().int % 1000000)
+
+        numero_fatura = dados.get("numero_fatura")
+
+        if not numero_fatura:
+            numero_fatura = f"CMP-{registro_id}"
+
+        print("FORNECEDOR:", fornecedor_id)
         print("ARMAZEM UUID:", armazem_uuid)
+        print("ITENS:", len(itens))
 
         if not fornecedor_id:
             return jsonify({"error": "Fornecedor obrigatório"}), 400
 
-        if not produto_uuid:
-            return jsonify({"error": "Produto obrigatório"}), 400
-
         if not armazem_uuid:
             return jsonify({"error": "Armazém obrigatório"}), 400
+
+        if not itens:
+            return jsonify({"error": "Nenhum item informado"}), 400
 
         conn = conectar()
         cur = conn.cursor()
 
         # =========================
-        # BUSCAR FORNECEDOR UUID
+        # FORNECEDOR UUID
         # =========================
         cur.execute("""
             SELECT uuid
             FROM fornecedores
             WHERE id=%s
         """, (fornecedor_id,))
-        fornecedor_uuid = cur.fetchone()
-        fornecedor_uuid = fornecedor_uuid[0] if fornecedor_uuid else None
+
+        r = cur.fetchone()
+
+        if not r:
+            return jsonify({"error": "Fornecedor não encontrado"}), 400
+
+        fornecedor_uuid = r[0]
+
+        print("FORNECEDOR UUID:", fornecedor_uuid)
 
         # =========================
-        # BUSCAR PRODUTO ID
-        # =========================
-        cur.execute("""
-            SELECT id
-            FROM produtos
-            WHERE uuid=%s
-        """, (produto_uuid,))
-        produto_id = cur.fetchone()
-        produto_id = produto_id[0] if produto_id else None
-
-        # =========================
-        # BUSCAR ARMAZEM LOCAL
+        # ARMAZÉM
         # =========================
         cur.execute("""
             SELECT local
             FROM armazem
             WHERE uuid=%s
         """, (armazem_uuid,))
-        local = cur.fetchone()
-        local = local[0] if local else None
 
-        print("\nRESOLVIDO:")
-        print("fornecedor_uuid:", fornecedor_uuid)
-        print("produto_id:", produto_id)
-        print("local:", local)
+        r = cur.fetchone()
+
+        if not r:
+            return jsonify({"error": "Armazém não encontrado"}), 400
+
+        local = r[0]
+
+        print("LOCAL:", local)
+
+        compras_gravadas = []
 
         # =========================
-        # INSERT (SEGURO)
+        # GRAVAR ITENS
         # =========================
-        cur.execute("""
-            INSERT INTO compras (
-                uuid,
+        for item in itens:
+
+            produto_uuid = item.get("produto_uuid")
+            quantidade = item.get("quantidade", 0)
+            valor_unit = item.get("valor_unit", 0)
+            valor_total = item.get("valor_total", 0)
+
+            print("\n========== ITEM ==========")
+            print("produto_uuid:", produto_uuid)
+            print("quantidade:", quantidade)
+            print("valor_unit:", valor_unit)
+            print("valor_total:", valor_total)
+
+            if not produto_uuid:
+                print("❌ ITEM IGNORADO - produto_uuid vazio")
+                continue
+
+            # =========================
+            # PRODUTO
+            # =========================
+            cur.execute("""
+                SELECT id
+                FROM produtos
+                WHERE uuid=%s
+            """, (produto_uuid,))
+
+            r = cur.fetchone()
+
+            if not r:
+                print("❌ PRODUTO NÃO ENCONTRADO:", produto_uuid)
+                continue
+
+            produto_id = r[0]
+
+            compra_uuid = str(uuid.uuid4())
+
+            print("\n===== DADOS FINAIS =====")
+            print("registro_id:", registro_id)
+            print("numero_fatura:", numero_fatura)
+            print("usuario_logado:", usuario_logado)
+            print("pago:", pago)
+            print("pagamento:", pagamento)
+            print("tipo_fatura:", tipo_fatura)
+
+            cur.execute("""
+                INSERT INTO compras (
+                    uuid,
+                    empresa_id,
+
+                    fornecedor,
+                    fornecedor_uuid,
+
+                    produto,
+                    produto_uuid,
+
+                    quantidade,
+                    valor_unit,
+                    valor_total,
+
+                    local,
+                    armazem_uuid,
+
+                    data,
+                    usuario_logado,
+
+                    pago,
+                    pagamento,
+                    tipo_fatura,
+
+                    numero_fatura,
+                    registro_id
+                )
+                VALUES (
+                    %s,%s,
+
+                    %s,%s,
+
+                    %s,%s,
+
+                    %s,%s,%s,
+
+                    %s,%s,
+
+                    %s,%s,
+
+                    %s,%s,%s,
+
+                    %s,%s
+                )
+                RETURNING id
+            """, (
+
+                compra_uuid,
                 empresa_id,
 
-                fornecedor,
+                fornecedor_id,
                 fornecedor_uuid,
 
-                produto,
+                produto_id,
                 produto_uuid,
 
                 quantidade,
@@ -3257,51 +3353,35 @@ def salvar_compras():
                 local,
                 armazem_uuid,
 
-                data
-            )
-            VALUES (
-                %s,%s,
+                date.today(),
+                usuario_logado,
 
-                %s,%s,
+                pago,
+                pagamento,
+                tipo_fatura,
 
-                %s,%s,
+                numero_fatura,
+                registro_id
+            ))
 
-                %s,%s,%s,
+            compra_id = cur.fetchone()[0]
 
-                %s,%s,
+            compras_gravadas.append({
+                "id": compra_id,
+                "uuid": compra_uuid
+            })
 
-                CURRENT_DATE
-            )
-            RETURNING id
-        """, (
-
-            compra_uuid,
-            empresa_id,
-
-            fornecedor_id,
-            fornecedor_uuid,
-
-            produto_id,
-            produto_uuid,
-
-            quantidade,
-            valor_unit,
-            valor_total,
-
-            local,
-            armazem_uuid
-        ))
-
-        compra_id = cur.fetchone()[0]
+            print("✔ ITEM GRAVADO:", compra_id)
 
         conn.commit()
 
-        print("✔ COMPRA SALVA:", compra_id)
+        print("\n✔ COMPRA FINALIZADA")
 
         return jsonify({
             "status": "ok",
-            "id": compra_id,
-            "uuid": compra_uuid
+            "registro_id": registro_id,
+            "numero_fatura": numero_fatura,
+            "compras": compras_gravadas
         })
 
     except Exception as e:
@@ -3309,17 +3389,25 @@ def salvar_compras():
         if conn:
             conn.rollback()
 
-        print("❌ ERRO:", repr(e))
+        print("❌ ERRO COMPLETO:", repr(e))
 
-        return jsonify({"error": str(e)}), 500
+        return jsonify({
+            "error": str(e)
+        }), 500
 
     finally:
 
-        if cur:
-            cur.close()
+        try:
+            if cur:
+                cur.close()
+        except:
+            pass
 
-        if conn:
-            conn.close()
+        try:
+            if conn:
+                conn.close()
+        except:
+            pass
 
 from flask import session, request, redirect
 @app.before_request
