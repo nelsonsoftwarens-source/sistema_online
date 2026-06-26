@@ -1536,15 +1536,16 @@ def api_salvar_stock():
                     quantidade = %s,
                     ultima_atualizacao = NOW(),
                     tipo_movimentacao = %s
-                WHERE uuid=%s
-                AND empresa_id=%s
+                WHERE uuid = %s
+                AND empresa_id = %s
             """, (
                 produto_id,
                 produto_uuid,
                 armazem_uuid,
                 dados.get("quantidade"),
                 dados.get("tipo_movimentacao"),
-                existe[0]
+                uuid_stock,
+                empresa_id
             ))
 
         else:
