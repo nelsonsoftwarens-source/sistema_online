@@ -1536,7 +1536,8 @@ def api_salvar_stock():
                     quantidade = %s,
                     ultima_atualizacao = NOW(),
                     tipo_movimentacao = %s
-                WHERE id = %s
+                WHERE uuid=%s
+                AND empresa_id=%s
             """, (
                 produto_id,
                 produto_uuid,
