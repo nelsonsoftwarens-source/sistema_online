@@ -1468,7 +1468,7 @@ def api_stock_filtrado():
 
     except Exception as e:
         return {"error": str(e)}, 500
-    
+
 @app.route("/api/salvar_stock", methods=["POST"])
 def api_salvar_stock():
 
@@ -1476,11 +1476,9 @@ def api_salvar_stock():
     cur = None
 
     try:
-
         dados = request.json
 
         token = dados.get("token")
-
         empresa = obter_empresa_por_token(token)
 
         if not empresa:
@@ -1494,151 +1492,107 @@ def api_salvar_stock():
         uuid_stock = dados.get("uuid")
         produto_uuid = dados.get("produto_uuid")
         armazem_uuid = dados.get("armazem_uuid")
+
+        # ==============================
+        # PRODUTO ID
+        # ==============================
+        produto_id = None
+
+        if produto_uuid:
+            cur.execute("""
+                SELECT id
+                FROM produtos
+                WHERE uuid = %s
+                AND empresa_id = %s
+            """, (produto_uuid, empresa_id))
+
+            r = cur.fetchone()
+            if r:
+                produto_id = r[0]
+
+        # ==============================
+        # LOCAL (NUNCA PODE SER NULL)
+        # ==============================
         local = dados.get("local")
 
-        # ==========================
-        # BUSCA PRODUTO
-        # ==========================
-        cur.execute("""
-            SELECT id
-            FROM produtos
-            WHERE uuid=%s
-            AND empresa_id=%s
-        """, (produto_uuid, empresa_id))
-
-        produto = cur.fetchone()
-
-        if not produto:
-            return jsonify({
-                "error": "Produto não encontrado"
-            }), 400
-
-        produto_id = produto[0]
-
-        # ==========================
-        # BUSCA LOCAL DO ARMAZÉM
-        # ==========================
         if armazem_uuid:
-
             cur.execute("""
                 SELECT local
                 FROM armazem
-                WHERE uuid=%s
-                AND empresa_id=%s
+                WHERE uuid = %s
+                AND empresa_id = %s
             """, (armazem_uuid, empresa_id))
 
             arm = cur.fetchone()
 
-            if not arm:
-                return jsonify({
-                    "error": "Armazém não encontrado"
-                }), 400
-
-            # usa o nome do armazém caso o payload não tenha enviado
-            if not local:
+            if arm:
                 local = arm[0]
 
-        # evita NULL
         if not local:
-            local = "SEM ARMAZÉM"
+            local = "SEM ARMAZEM"
 
-        # ==========================
-        # EXISTE?
-        # ==========================
+        quantidade = dados.get("quantidade")
+        tipo = dados.get("tipo_movimentacao")
+
+        # ==============================
+        # UPSERT (CORRETO)
+        # ==============================
         cur.execute("""
-            SELECT id
-            FROM stock
-            WHERE uuid=%s
-            AND empresa_id=%s
-        """, (uuid_stock, empresa_id))
-
-        existe = cur.fetchone()
-
-        # ==========================
-        # UPDATE
-        # ==========================
-        if existe:
-
-            cur.execute("""
-                UPDATE stock
-                SET
-                    produto=%s,
-                    produto_uuid=%s,
-                    armazem_uuid=%s,
-                    local=%s,
-                    quantidade=%s,
-                    ultima_atualizacao=NOW(),
-                    tipo_movimentacao=%s
-                WHERE uuid=%s
-                AND empresa_id=%s
-            """, (
-                produto_id,
+            INSERT INTO stock (
+                uuid,
+                produto,
                 produto_uuid,
                 armazem_uuid,
                 local,
-                dados.get("quantidade"),
-                dados.get("tipo_movimentacao"),
-                uuid_stock,
+                quantidade,
+                data,
+                ultima_atualizacao,
+                tipo_movimentacao,
                 empresa_id
-            ))
-
-        # ==========================
-        # INSERT
-        # ==========================
-        else:
-
-            cur.execute("""
-                INSERT INTO stock(
-                    uuid,
-                    produto,
-                    produto_uuid,
-                    armazem_uuid,
-                    local,
-                    quantidade,
-                    data,
-                    ultima_atualizacao,
-                    tipo_movimentacao,
-                    empresa_id
-                )
-                VALUES(
-                    %s,%s,%s,%s,%s,%s,NOW(),NOW(),%s,%s
-                )
-            """, (
-                uuid_stock,
-                produto_id,
-                produto_uuid,
-                armazem_uuid,
-                local,
-                dados.get("quantidade"),
-                dados.get("tipo_movimentacao"),
-                empresa_id
-            ))
+            )
+            VALUES (
+                %s,%s,%s,%s,%s,%s,NOW(),NOW(),%s,%s
+            )
+            ON CONFLICT (uuid)
+            DO UPDATE SET
+                produto = EXCLUDED.produto,
+                produto_uuid = EXCLUDED.produto_uuid,
+                armazem_uuid = EXCLUDED.armazem_uuid,
+                local = EXCLUDED.local,
+                quantidade = EXCLUDED.quantidade,
+                ultima_atualizacao = EXCLUDED.ultima_atualizacao,
+                tipo_movimentacao = EXCLUDED.tipo_movimentacao
+        """, (
+            uuid_stock,
+            produto_id,
+            produto_uuid,
+            armazem_uuid,
+            local,
+            quantidade,
+            tipo,
+            empresa_id
+        ))
 
         conn.commit()
 
-        return jsonify({
-            "status": "ok"
-        })
+        return jsonify({"status": "ok"})
 
     except Exception as e:
-
         if conn:
             conn.rollback()
 
         import traceback
         traceback.print_exc()
 
-        return jsonify({
-            "error": str(e)
-        }), 500
+        return jsonify({"error": str(e)}), 500
 
     finally:
-
         if cur:
             cur.close()
-
         if conn:
             conn.close()
+
+
 
 from decimal import Decimal
 import uuid
