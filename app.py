@@ -3440,6 +3440,8 @@ def proteger_rotas():
         "api_salvar_stock",
 
         "api_tickets",
+        "salvar_ticket",
+        "api_salvar_ticket"
         "api_vendas",
         "api_salvar_venda",
         "api_fornecedores",
