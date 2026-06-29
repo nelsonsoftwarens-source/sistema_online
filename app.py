@@ -2113,6 +2113,9 @@ def api_armazens():
 @app.route("/api/salvar_ticket", methods=["POST"])
 def api_salvar_ticket():
 
+    print("\n========== API SALVAR TICKET ==========")
+    print(request.json)
+
     try:
         dados = request.json or {}
         token = dados.get("token")
