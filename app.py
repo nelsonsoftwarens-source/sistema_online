@@ -3454,8 +3454,10 @@ def proteger_rotas():
         "api_compras",
         "salvar_compra",
     ]
-    print("ENDPOINT:", request.endpoint)
-    print("ROTAS:", rotas_livres)
+    print("PATH:", request.path)
+    print("ENDPOINT:", repr(request.endpoint))
+    print("ESTÁ NA LISTA?", request.endpoint in rotas_livres)
+    print("LOGIN_ID:", session.get("login_id"))
 
     if request.endpoint in rotas_livres:
         return
