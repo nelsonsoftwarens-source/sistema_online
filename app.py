@@ -3439,17 +3439,23 @@ def proteger_rotas():
         "api_stock",
         "api_salvar_stock",
 
+        "ticket",
         "api_tickets",
         "salvar_ticket",
-        "api_salvar_ticket"
+        "api_salvar_ticket",
+
         "api_vendas",
         "api_salvar_venda",
+
         "api_fornecedores",
         "api_fornecedores_get",
+
         "api_compras_get",
         "api_compras",
         "salvar_compra",
     ]
+    print("ENDPOINT:", request.endpoint)
+    print("ROTAS:", rotas_livres)
 
     if request.endpoint in rotas_livres:
         return
