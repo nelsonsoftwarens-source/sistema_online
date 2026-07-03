@@ -12,11 +12,18 @@
 
 /* ===================== FILTROS ===================== */
 .stock-filtros{
+    position:sticky;
+    top:100px; /* altura da topbar */
+
     width:260px;
+    height:calc(100vh - 120px);
+
     background:#fff;
     padding:15px;
     border-radius:10px;
     box-shadow:0 2px 10px rgba(0,0,0,0.08);
+
+    overflow-y:auto;
 }
 
 .campo-busca{
@@ -65,11 +72,17 @@
 
 /* ===================== TABELA ===================== */
 .stock-tabela{
+    position:sticky;
+    top:100px;
+
     flex:1;
+    height:calc(100vh - 120px);
+
     background:#fff;
     padding:15px;
     border-radius:10px;
     box-shadow:0 2px 10px rgba(0,0,0,0.08);
+
     overflow:auto;
 }
 

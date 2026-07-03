@@ -2,20 +2,19 @@
 
 {% block conteudo %}
 
-<div class="topo-pagina">
-    <h2>🎫 Tickets</h2>
-</div>
+<div class="cabecalho-pagina">
 
-<!-- ====================================== -->
-<!-- BUSCA -->
-<!-- ====================================== -->
+    <div class="topo-pagina">
+        <h2>🎫 Tickets</h2>
+    </div>
 
-<div class="painel">
-
-    <input type="text"
-           id="buscaTicket"
-           class="campo-busca-inline"
-           placeholder="🔎 Buscar ticket, mesa ou cliente...">
+    <div class="painel">
+        <input
+            type="text"
+            id="buscaTicket"
+            class="campo-busca-inline"
+            placeholder="🔎 Buscar ticket, mesa ou cliente...">
+    </div>
 
 </div>
 
@@ -23,7 +22,7 @@
 <!-- TABELA -->
 <!-- ====================================== -->
 
-<div class="painel">
+<div class="painel tabela-container">
 
     <table id="tabelaTickets">
 
