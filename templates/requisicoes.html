@@ -1,0 +1,168 @@
+{% extends 'base.html' %}
+
+{% block conteudo %}
+
+
+<div class="vendas-layout">
+
+
+<!-- =============================
+     REQUISIÇÃO ATUAL
+============================= -->
+
+<div class="carrinho">
+
+
+<h2>
+📦 Requisição
+</h2>
+
+
+<div class="dados-requisicao">
+
+    <!-- Sector -->
+    <label>
+        Sector
+    </label>
+
+    <select id="destino">
+
+        {% for s in sectores %}
+
+        <option value="{{s.uuid}}">
+            {{s.nome}}
+        </option>
+
+        {% endfor %}
+
+    </select>
+
+
+    <!-- Responsável -->
+    <label class="mt-2">
+        Responsável do Sector
+    </label>
+
+    <input
+        type="text"
+        id="responsavel"
+        class="form-control"
+        placeholder="Nome do responsável"
+        autocomplete="off"
+        style="text-transform: uppercase;"
+        oninput="this.value = this.value.toUpperCase();"
+    >
+
+
+    <!-- Observação -->
+    <label class="mt-2">
+        Observação
+    </label>
+
+    <textarea
+        id="observacao"
+        placeholder="Observação..."
+        rows="3">
+    </textarea>
+
+</div>
+
+<table id="tabela-carrinho">
+
+<thead>
+
+<tr>
+
+<th>
+Produto
+</th>
+
+<th>
+Qtd
+</th>
+
+<th>
+Ação
+</th>
+
+</tr>
+</thead>
+<tbody>
+
+</tbody>
+
+</table>
+<h1 id="total-geral">
+0 itens
+</h1>
+<button
+class="btn-finalizar"
+onclick="guardarRequisicao()">
+📤 Enviar Requisição
+</button>
+</div>
+
+<!-- =============================
+     PRODUTOS
+============================= -->
+
+<div class="produtos">
+<div class="header-produtos">
+<h2>
+📦 Produtos
+</h2>
+<input
+type="text"
+id="filtro-produtos"
+class="campo-busca-inline"
+placeholder="🔎 Filtrar produtos..."
+>
+</div>
+<div class="grid-produtos" id="listaProdutos">
+{% for p in produtos %}
+<div class="card-produto"
+data-id="{{p[0]}}"
+data-nome="{{p[1]}}"
+>
+
+<h3>
+
+{{p[1]}}
+
+</h3>
+
+<p>
+
+{{p[3]}}
+
+</p>
+
+<input
+type="number"
+value="1"
+min="1"
+id="qtd-{{p[0]}}"
+
+>
+<button
+
+onclick="adicionarProduto(this)">
+
+➕
+
+</button>
+
+</div>
+
+{% endfor %}
+
+</div>
+</div>
+</div>
+
+<script src="{{url_for(
+'static',
+filename='js/requisicoes.js'
+)}}"></script>
+
+{% endblock %}

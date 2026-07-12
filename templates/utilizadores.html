@@ -1,0 +1,368 @@
+{% extends 'base.html' %}
+
+{% block conteudo %}
+
+
+<div class="utilizadores-layout">
+
+<div class="utilizadores-form">
+
+    <h2>👤 Cadastro de Utilizadores</h2>
+
+    <input type="hidden" id="uuid">
+
+    <div class="utilizadores-grid">
+
+        <div class="campo">
+            <label>Nome Completo</label>
+            <input type="text" id="nome" oninput="this.value=this.value.toUpperCase()">
+        </div>
+
+        <div class="campo">
+            <label>Utilizador</label>
+            <input type="text" id="utilizador" oninput="this.value=this.value.toLowerCase()">
+        </div>
+
+        <div class="campo">
+            <label>Cargo</label>
+            <input type="text" id="cargo" oninput="this.value=this.value.toUpperCase()">
+        </div>
+
+        <div class="campo">
+            <label>Palavra-passe</label>
+            <input type="password" id="senha">
+        </div>
+
+        <div class="campo">
+            <label>Confirmar Palavra-passe</label>
+            <input type="password" id="confirmar_senha">
+        </div>
+
+        <div class="campo">
+            <label>Telefone</label>
+            <input type="text" id="telefone">
+        </div>
+
+        <div class="campo">
+            <label>Email</label>
+            <input type="email" id="email">
+        </div>
+
+        <div class="campo">
+            <label>Estado</label>
+
+            <div class="checks">
+
+                <label>
+                    <input type="checkbox" id="activo" checked>
+                    Activo
+                </label>
+
+                <label>
+                    <input type="checkbox" id="administrador">
+                    Administrador
+                </label>
+
+            </div>
+
+        </div>
+
+        <div class="campo">
+
+            <label>Ações</label>
+
+            <div class="acoes">
+
+                <button class="btn-novo" onclick="novoUtilizador()">
+                    Novo
+                </button>
+
+                <button class="btn-guardar" onclick="guardarUtilizador()">
+                    Guardar
+                </button>
+
+                <button class="btn-atualizar" onclick="atualizarUtilizador()">
+                    Atualizar
+                </button>
+
+                <button class="btn-limpar" onclick="limparFormulario()">
+                    Limpar
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+<!-- =====================================
+     LISTA DE UTILIZADORES
+===================================== -->
+
+
+<div class="utilizadores-lista">
+
+
+
+    <div class="lista-header">
+
+
+        <h2>
+            👥 Lista de Utilizadores
+        </h2>
+
+
+
+        <input
+
+            type="text"
+
+            id="filtro-utilizador"
+
+            placeholder="🔎 Pesquisar utilizador..."
+
+        >
+
+
+    </div>
+
+
+
+
+
+    <div class="tabela-container">
+
+
+        <table>
+
+
+            <thead>
+
+
+                <tr>
+
+                    <th>
+                        Nome
+                    </th>
+
+
+                    <th>
+                        Utilizador
+                    </th>
+
+
+                    <th>
+                        Cargo
+                    </th>
+
+
+                    <th>
+                        Telefone
+                    </th>
+
+
+                    <th>
+                        Estado
+                    </th>
+
+
+                    <th>
+                        Administrador
+                    </th>
+
+
+                </tr>
+
+
+            </thead>
+
+
+
+
+            <tbody id="tbody-utilizadores">
+
+
+
+                {% for u in utilizadores %}
+
+
+
+                <tr
+
+                    ondblclick="abrirUtilizador('{{u[0]}}')"
+
+                    data-nome="{{u[1]|lower}}"
+
+                    data-utilizador="{{u[2]|lower}}"
+
+                >
+
+
+
+                    <td>
+                        {{u[1]}}
+                    </td>
+
+
+
+                    <td>
+                        {{u[2]}}
+                    </td>
+
+
+
+                    <td>
+                        {{u[3] or ''}}
+                    </td>
+
+
+
+                    <td>
+                        {{u[4] or ''}}
+                    </td>
+
+
+
+                    <td>
+
+
+                        {% if u[5] %}
+
+                            <span class="estado-activo">
+                                ACTIVO
+                            </span>
+
+                        {% else %}
+
+                            <span class="estado-inactivo">
+                                INACTIVO
+                            </span>
+
+                        {% endif %}
+
+
+
+                    </td>
+
+
+
+
+                    <td>
+
+
+                        {% if u[6] %}
+
+                            ✅ SIM
+
+                        {% else %}
+
+                            ❌ NÃO
+
+                        {% endif %}
+
+
+
+                    </td>
+
+
+
+                </tr>
+
+
+
+                {% endfor %}
+
+
+
+            </tbody>
+
+
+
+        </table>
+
+
+    </div>
+
+
+
+</div>
+
+
+
+</div>
+
+
+
+
+
+<!-- =====================================
+     MODAL DETALHES
+===================================== -->
+
+
+<div
+
+id="modalUtilizador"
+
+class="modal"
+
+
+
+>
+
+
+    <div class="modal-content">
+
+
+
+        <h3>
+            👤 Dados do Utilizador
+        </h3>
+
+
+
+
+        <div id="detalhesUtilizador">
+
+
+        </div>
+
+
+
+
+        <button
+
+            onclick="fecharModalUtilizador()"
+
+        >
+
+            Fechar
+
+        </button>
+
+
+
+    </div>
+
+
+</div>
+
+
+
+
+<script
+
+src="{{url_for(
+
+'static',
+
+filename='js/utilizadores.js'
+
+)}}">
+
+</script>
+
+
+
+{% endblock %}

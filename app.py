@@ -1,17 +1,169 @@
 from flask import Flask, request, jsonify, render_template, redirect, session
 from conexao import conectar
 import uuid
+from functools import wraps
+from flask import redirect, session
+
 app = Flask(__name__)
 app.secret_key = "nvsistema2025"
+from functools import wraps
+from flask import session, redirect
 
+   
+@app.context_processor
+def inject_utilizador():
+
+    return {
+
+        "utilizador_logado": obter_utilizador_logado()
+
+    }
+
+
+def obter_utilizador_logado():
+
+    try:
+
+        empresa_id = session.get("empresa_id")
+
+        if not empresa_id:
+
+            return None
+
+
+        login_id = session.get("login_id")
+
+
+        conn = conectar()
+
+        cur = conn.cursor()
+
+
+
+        cur.execute("""
+            SELECT
+                uuid,
+                nome,
+                id
+            FROM utilizadores
+            WHERE empresa_id=%s
+            AND activo=true
+            ORDER BY nome
+        """,
+        (
+            empresa_id,
+        ))
+
+
+
+        utilizadores = cur.fetchall()
+
+
+        cur.close()
+
+        conn.close()
+
+
+
+        if not utilizadores:
+
+            return None
+
+
+
+        # tenta encontrar pelo uuid
+
+        for u in utilizadores:
+
+            if str(u[0]) == str(login_id):
+
+                return u[1]
+
+
+
+        # tenta encontrar pelo id
+
+        for u in utilizadores:
+
+            if str(u[2]) == str(login_id):
+
+                return u[1]
+
+
+
+        return None
+
+
+
+    except Exception as e:
+
+        return None
+ 
+# ==========================================
+# INICIO DO SISTEMA
+# ==========================================
 @app.route("/")
 def inicio():
 
     if "login_id" not in session:
+
         return redirect("/login")
 
-    return redirect("/painel")
 
+    if "usuario_uuid" not in session:
+
+        return redirect("/entrada_utilizador")
+
+
+    return redirect("/painel")
+# ==========================================
+# PROTEÇÃO GERAL
+# EMPRESA + UTILIZADOR
+# ==========================================
+def login_required(func):
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+
+        if "login_id" not in session:
+
+            return redirect("/login")
+
+
+        if "empresa_id" not in session:
+
+            return "Empresa não definida", 401
+
+
+        return func(*args, **kwargs)
+
+
+    return wrapper
+
+def utilizador_required(func):
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+
+        if "login_id" not in session:
+
+            return redirect("/login")
+
+
+        if "empresa_id" not in session:
+
+            return "Empresa não definida",401
+
+
+        if "usuario_uuid" not in session:
+
+            return redirect("/entrada_utilizador")
+
+
+        return func(*args, **kwargs)
+
+
+    return wrapper
 
 @app.route("/api/salvar_empresa", methods=["POST"])
 def salvar_empresa():
@@ -3417,6 +3569,2681 @@ def salvar_compras():
         except:
             pass
 
+@app.route("/api_requisicoes")
+@login_required
+@utilizador_required
+def api_requisicoes():
+
+    empresa_id = session.get("empresa_id")
+
+    conn = conectar()
+    cur = conn.cursor()
+
+    # ===========================
+    # UTILIZADORES
+    # ===========================
+
+    cur.execute("""
+        SELECT
+            uuid,
+            nome
+        FROM utilizadores
+        WHERE empresa_id=%s
+        ORDER BY nome
+    """, (empresa_id,))
+
+    utilizadores = [
+        {
+            "uuid": r[0],
+            "nome": r[1]
+        }
+        for r in cur.fetchall()
+    ]
+
+    # ===========================
+    # SECTORES
+    # ===========================
+
+    cur.execute("""
+        SELECT
+            uuid,
+            nome
+        FROM sectores
+        WHERE empresa_id=%s
+        AND activo=true
+        ORDER BY nome
+    """, (empresa_id,))
+
+    sectores = [
+        {
+            "uuid": r[0],
+            "nome": r[1]
+        }
+        for r in cur.fetchall()
+    ]
+
+    cur.close()
+    conn.close()
+
+    return render_template(
+        "requisicoes.html",
+        utilizadores=utilizadores,
+        sectores=sectores
+    )
+
+@app.route("/api/buscar_produtos")
+@login_required
+@utilizador_required
+def buscar_produtos():
+
+    empresa_id = session["empresa_id"]
+
+    texto = request.args.get("q", "").strip()
+
+    conn = conectar()
+    cur = conn.cursor()
+
+    cur.execute("""
+        SELECT 
+            id,
+            descricao,
+            preco_venda,
+            categoria
+        FROM produtos
+        WHERE empresa_id = %s
+        AND ativo = TRUE
+        AND descricao ILIKE %s
+        ORDER BY descricao
+        LIMIT 100
+
+    """,
+    (
+        empresa_id,
+        f"%{texto}%"
+    ))
+
+    produtos = []
+
+    for p in cur.fetchall():
+
+        produtos.append({
+
+            "id": p[0],
+            "descricao": p[1],
+            "preco_venda": float(p[2] or 0),
+            "categoria": p[3]
+
+        })
+
+
+    cur.close()
+    conn.close()
+
+    return jsonify(produtos)
+@app.route("/requisicoes")
+def requisicoes():
+
+    empresa_id = session.get("empresa_id")
+
+
+    if not empresa_id:
+
+        return "Empresa não encontrada", 401
+
+
+
+    conn = conectar()
+
+    cur = conn.cursor()
+
+
+
+    # ==============================
+    # UTILIZADORES
+    # ==============================
+
+    cur.execute(
+        """
+
+        SELECT
+
+            uuid,
+
+            nome
+
+
+        FROM utilizadores
+
+
+        WHERE empresa_id=%s
+
+
+        ORDER BY nome
+
+
+        """,
+
+        (
+            empresa_id,
+        )
+
+    )
+
+
+    utilizadores = []
+
+
+    for u in cur.fetchall():
+
+        utilizadores.append({
+
+            "uuid": u[0],
+
+            "nome": u[1]
+
+        })
+
+
+
+
+
+    # ==============================
+    # SECTORES
+    # ==============================
+
+
+    cur.execute(
+        """
+
+        SELECT
+
+            uuid,
+
+            nome
+
+
+        FROM sectores
+
+
+        WHERE empresa_id=%s
+
+
+        AND activo=true
+
+
+        ORDER BY nome
+
+
+        """,
+
+        (
+            empresa_id,
+        )
+
+    )
+
+
+    sectores = []
+
+
+    for s in cur.fetchall():
+
+        sectores.append({
+
+            "uuid": s[0],
+
+            "nome": s[1]
+
+        })
+
+
+
+
+
+    # ==============================
+    # PRODUTOS
+    # ==============================
+
+
+    cur.execute("""
+
+        SELECT
+
+            id,
+
+            descricao,
+
+            preco_venda,
+
+            categoria
+
+
+        FROM produtos
+
+
+        WHERE empresa_id=%s
+
+
+        AND ativo=true
+
+
+        ORDER BY descricao
+
+
+    """,
+    (
+        empresa_id,
+    ))
+
+
+
+    produtos = cur.fetchall()
+
+
+
+
+
+
+    cur.close()
+
+    conn.close()
+
+
+
+    return render_template(
+
+        "requisicoes.html",
+
+        utilizadores=utilizadores,
+
+        sectores=sectores,
+
+        produtos=produtos
+
+    )
+
+from flask import request, jsonify, session
+from datetime import datetime
+import uuid
+
+@app.route("/api/enviar_requisicao", methods=["POST"])
+@login_required
+@utilizador_required
+def enviar_requisicao():
+
+    try:
+
+        dados = request.json or {}
+
+        empresa_id = session.get("empresa_id")
+        usuario = session.get("nome") or session.get("usuario") or "Sistema"
+
+        if not empresa_id:
+
+            return jsonify({
+
+                "sucesso": False,
+
+                "mensagem": "Empresa não encontrada"
+
+            }), 401
+
+        # ==========================
+        # DADOS RECEBIDOS
+        # ==========================
+
+        destino_uuid = dados.get("destino")
+
+        responsavel = (
+            dados.get("responsavel", "")
+            .strip()
+            .upper()
+        )
+
+        observacao = (
+            dados.get("observacao", "")
+            .strip()
+        )
+
+        itens = dados.get("itens", [])
+
+        # ==========================
+        # VALIDAÇÕES
+        # ==========================
+
+        if not destino_uuid:
+
+            return jsonify({
+
+                "sucesso": False,
+
+                "mensagem": "Selecione o sector."
+
+            })
+
+        if not responsavel:
+
+            return jsonify({
+
+                "sucesso": False,
+
+                "mensagem": "Informe o responsável do sector."
+
+            })
+
+        if not itens:
+
+            return jsonify({
+
+                "sucesso": False,
+
+                "mensagem": "Nenhum produto selecionado."
+
+            })
+
+        conn = conectar()
+        cur = conn.cursor()
+
+        # ==========================
+        # BUSCAR NOME DO SECTOR
+        # ==========================
+
+        cur.execute("""
+
+            SELECT nome
+
+            FROM sectores
+
+            WHERE uuid=%s
+
+            AND empresa_id=%s
+
+        """, (
+
+            destino_uuid,
+
+            empresa_id
+
+        ))
+
+        setor = cur.fetchone()
+
+        if not setor:
+
+            cur.close()
+            conn.close()
+
+            return jsonify({
+
+                "sucesso": False,
+
+                "mensagem": "Sector não encontrado."
+
+            })
+
+        nome_setor = setor[0]
+
+        # ==========================
+        # GERAR DADOS
+        # ==========================
+
+        requisicao_uuid = str(uuid.uuid4())
+
+        numero = "REQ-" + datetime.now().strftime("%Y%m%d%H%M%S")
+
+        # ==========================
+        # CABEÇALHO
+        # ==========================
+
+        cur.execute("""
+
+            INSERT INTO requisicoes
+            (
+
+                uuid,
+
+                empresa_id,
+
+                numero,
+
+                sector,
+
+                utilizador,
+
+                utilizador_uuid,
+
+                origem,
+
+                destino,
+
+                observacao,
+
+                estado,
+
+                data,
+
+                criado_por
+
+            )
+
+            VALUES
+
+            (
+
+                %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW(),%s
+
+            )
+
+        """, (
+            requisicao_uuid,
+
+            empresa_id,
+
+            numero,
+
+            nome_setor,
+
+            responsavel,      # <-- utilizador passa a ser o responsável
+
+            None,
+
+            "Armazém Geral",  # ou outra origem que pretendas manter
+
+            nome_setor,
+
+            observacao,
+
+            "PENDENTE",
+
+            usuario           # quem criou a requisição
+
+        ))
+
+        # ==========================
+        # ITENS
+        # ==========================
+
+        for item in itens:
+
+            produto_id = item.get("id")
+
+            quantidade = float(item.get("qtd", 0))
+
+            if quantidade <= 0:
+                continue
+
+            cur.execute("""
+
+                SELECT
+
+                    uuid,
+
+                    descricao
+
+                FROM produtos
+
+                WHERE id=%s
+
+                AND empresa_id=%s
+
+            """, (
+
+                produto_id,
+
+                empresa_id
+
+            ))
+
+            produto = cur.fetchone()
+
+            if not produto:
+                continue
+
+            produto_uuid = produto[0]
+
+            nome_produto = produto[1]
+
+            item_uuid = str(uuid.uuid4())
+
+            cur.execute("""
+
+                INSERT INTO requisicao_itens
+
+                (
+
+                    uuid,
+
+                    requisicao_uuid,
+
+                    produto_uuid,
+
+                    produto,
+
+                    quantidade_pedida,
+
+                    quantidade_entregue,
+
+                    quantidade_recusada,
+
+                    empresa_id,
+
+                    estado
+
+                )
+
+                VALUES
+
+                (
+
+                    %s,%s,%s,%s,%s,%s,%s,%s,%s
+
+                )
+
+            """, (
+
+                item_uuid,
+
+                requisicao_uuid,
+
+                produto_uuid,
+
+                nome_produto,
+
+                quantidade,
+
+                0,
+
+                0,
+
+                empresa_id,
+
+                "PENDENTE"
+
+            ))
+
+        # ==========================
+        # HISTÓRICO
+        # ==========================
+
+        cur.execute("""
+
+            INSERT INTO requisicao_historico
+
+            (
+
+                requisicao_uuid,
+
+                data,
+
+                utilizador,
+
+                empresa_id,
+
+                acao,
+
+                observacao
+
+            )
+
+            VALUES
+
+            (
+
+                %s,
+
+                NOW(),
+
+                %s,
+
+                %s,
+
+                %s,
+
+                %s
+
+            )
+
+        """, (
+
+            requisicao_uuid,
+
+            usuario,
+
+            empresa_id,
+
+            "REQUISIÇÃO CRIADA",
+
+            "Aguardando atendimento"
+
+        ))
+
+        conn.commit()
+
+        cur.close()
+
+        conn.close()
+
+        return jsonify({
+
+            "sucesso": True,
+
+            "numero": numero,
+
+            "mensagem": "Requisição criada com sucesso."
+
+        })
+
+    except Exception as e:
+
+        try:
+            conn.rollback()
+        except:
+            pass
+
+        try:
+            cur.close()
+            conn.close()
+        except:
+            pass
+
+        print("ERRO REQUISIÇÃO:", e)
+
+        return jsonify({
+
+            "sucesso": False,
+
+            "mensagem": str(e)
+
+        }), 500
+
+@app.route("/sectores")
+@login_required
+@utilizador_required
+def sectores():
+
+    empresa_id = session.get("empresa_id")
+
+
+    conn = conectar()
+
+    cur = conn.cursor()
+
+
+    cur.execute("""
+
+        SELECT
+
+            uuid,
+
+            nome,
+
+            activo
+
+
+        FROM sectores
+
+
+        WHERE empresa_id=%s
+
+
+        ORDER BY nome
+
+
+    """,
+    (
+        empresa_id,
+    ))
+
+
+    sectores = cur.fetchall()
+
+
+    cur.close()
+
+    conn.close()
+
+
+    return render_template(
+
+        "sectores.html",
+
+        sectores=sectores
+
+    )
+
+@app.route("/api/salvar_sector", methods=["POST"])
+@login_required
+@utilizador_required
+def salvar_sector():
+
+    import uuid
+
+
+    dados = request.json
+
+
+    empresa_id = session.get("empresa_id")
+
+
+    nome = dados.get("nome","").strip()
+
+
+    if not nome:
+
+        return jsonify({
+
+            "sucesso":False,
+
+            "mensagem":"Nome obrigatório"
+
+        })
+
+
+
+    conn = conectar()
+
+    cur = conn.cursor()
+
+
+
+    cur.execute("""
+
+        INSERT INTO sectores
+
+        (
+
+            uuid,
+
+            empresa_id,
+
+            nome,
+
+            activo
+
+        )
+
+
+        VALUES
+
+        (
+
+            %s,%s,%s,%s
+
+        )
+
+
+    """,
+    (
+
+        str(uuid.uuid4()),
+
+        empresa_id,
+
+        nome.upper(),
+
+        True
+
+    ))
+
+
+
+    conn.commit()
+
+
+    cur.close()
+
+    conn.close()
+
+
+
+    return jsonify({
+
+        "sucesso":True
+
+    })
+
+@app.route("/fiel_armazem")
+@login_required
+@utilizador_required
+def fiel_armazem():
+
+
+    empresa_id = session.get("empresa_id")
+
+
+    conn = conectar()
+
+    cur = conn.cursor()
+
+
+
+    cur.execute("""
+    
+        SELECT
+
+            uuid,
+
+            numero,
+
+            sector,
+
+            utilizador,
+
+            estado,
+
+            TO_CHAR(data,'YYYY-MM-DD HH24:MI')
+
+
+        FROM requisicoes
+
+
+        WHERE empresa_id=%s
+
+
+        ORDER BY data DESC
+
+
+    """,
+    (
+        empresa_id,
+    ))
+
+
+
+    requisicoes = cur.fetchall()
+
+
+
+    cur.close()
+
+    conn.close()
+
+
+
+    return render_template(
+
+        "fiel_armazem.html",
+
+        requisicoes=requisicoes
+
+    )
+@app.route("/fiel_armazem/<uuid>")
+@login_required
+@utilizador_required
+def detalhe_requisicao(uuid):
+
+    empresa_id = session.get("empresa_id")
+
+
+    conn = conectar()
+
+    cur = conn.cursor()
+
+
+
+    # ===============================
+    # DADOS DA REQUISIÇÃO
+    # ===============================
+
+    cur.execute("""
+
+        SELECT
+
+            numero,
+
+            sector,
+
+            estado
+
+
+        FROM requisicoes
+
+
+        WHERE uuid=%s
+
+        AND empresa_id=%s
+
+
+    """,
+    (
+        uuid,
+        empresa_id
+    ))
+
+
+    requisicao = cur.fetchone()
+
+
+
+    # ===============================
+    # ITENS
+    # ===============================
+
+    cur.execute("""
+
+        SELECT
+
+            uuid,
+
+            produto,
+
+            COALESCE(quantidade_pedida,0),
+
+            COALESCE(quantidade_entregue,0),
+
+            COALESCE(quantidade_recusada,0),
+
+            COALESCE(motivo,'')
+
+
+        FROM requisicao_itens
+
+
+        WHERE requisicao_uuid=%s
+
+        AND empresa_id=%s
+
+
+        ORDER BY produto
+
+
+    """,
+    (
+        uuid,
+        empresa_id
+    ))
+
+
+
+    itens = cur.fetchall()
+
+
+
+    cur.close()
+
+    conn.close()
+
+
+
+    return render_template(
+
+        "detalhe_requisicao.html",
+
+        requisicao=requisicao,
+
+        itens=itens,
+
+        uuid=uuid
+
+    )
+
+@app.route("/api/concluir_requisicao", methods=["POST"])
+@login_required
+@utilizador_required
+def concluir_requisicao():
+
+    try:
+
+        dados = request.json
+
+
+        empresa_id = session.get("empresa_id")
+
+        usuario = (
+            session.get("nome")
+            or session.get("usuario")
+            or "Sistema"
+        )
+
+
+        requisicao_uuid = dados.get("requisicao_uuid")
+
+        itens = dados.get("itens", [])
+
+
+
+        if not requisicao_uuid:
+
+            return jsonify({
+
+                "sucesso": False,
+
+                "mensagem": "Requisição inválida"
+
+            })
+
+
+
+        conn = conectar()
+
+        cur = conn.cursor()
+
+
+
+        # =================================
+        # VERIFICAR ESTADO DA REQUISIÇÃO
+        # =================================
+
+
+        cur.execute("""
+
+            SELECT estado
+
+            FROM requisicoes
+
+            WHERE uuid=%s
+
+            AND empresa_id=%s
+
+
+        """,
+        (
+
+            requisicao_uuid,
+
+            empresa_id
+
+        ))
+
+
+
+        req = cur.fetchone()
+
+
+
+        if not req:
+
+
+            return jsonify({
+
+                "sucesso":False,
+
+                "mensagem":"Requisição não encontrada"
+
+            })
+
+
+
+
+        if req[0] == "CONCLUIDO":
+
+
+            return jsonify({
+
+                "sucesso":False,
+
+                "mensagem":
+                "Esta requisição já foi concluída"
+
+            })
+
+
+
+
+
+
+
+        # =================================
+        # ATUALIZAR ITENS
+        # =================================
+
+
+        for item in itens:
+
+
+
+            item_uuid = item.get("id")
+
+
+            entregue = float(
+                item.get("entregue",0)
+            )
+
+
+            recusado = float(
+                item.get("recusado",0)
+            )
+
+
+            motivo = item.get(
+                "motivo",
+                ""
+            )
+
+
+
+            estado_item = "ENTREGUE"
+
+
+
+            if recusado > 0:
+
+
+                estado_item = "RECUSADO"
+
+
+
+            cur.execute("""
+
+                UPDATE requisicao_itens
+
+
+                SET
+
+
+                quantidade_entregue=%s,
+
+
+                quantidade_recusada=%s,
+
+
+                motivo=%s,
+
+
+                estado=%s
+
+
+                WHERE uuid=%s
+
+
+                AND empresa_id=%s
+
+
+
+            """,
+            (
+
+                entregue,
+
+                recusado,
+
+                motivo,
+
+                estado_item,
+
+                item_uuid,
+
+                empresa_id
+
+            ))
+
+
+
+
+
+
+
+        # =================================
+        # CONCLUIR REQUISIÇÃO
+        # =================================
+
+
+        cur.execute("""
+
+            UPDATE requisicoes
+
+
+            SET
+
+
+            estado='CONCLUIDO',
+
+
+            data_conclusao=NOW(),
+
+
+            atendido_por=%s
+
+
+
+            WHERE uuid=%s
+
+
+            AND empresa_id=%s
+
+
+
+        """,
+        (
+
+            usuario,
+
+            requisicao_uuid,
+
+            empresa_id
+
+        ))
+
+
+
+
+
+
+
+        # =================================
+        # HISTÓRICO
+        # =================================
+
+
+        cur.execute("""
+
+            INSERT INTO requisicao_historico
+
+            (
+
+                requisicao_uuid,
+
+                data,
+
+                utilizador,
+
+                empresa_id,
+
+                acao,
+
+                observacao
+
+            )
+
+
+            VALUES
+
+            (
+
+                %s,
+
+                NOW(),
+
+                %s,
+
+                %s,
+
+                %s,
+
+                %s
+
+            )
+
+
+        """,
+        (
+
+            requisicao_uuid,
+
+            usuario,
+
+            empresa_id,
+
+            "REQUISIÇÃO CONCLUÍDA",
+
+            "Entrega processada pelo fiel de armazém"
+
+        ))
+
+
+
+
+
+        conn.commit()
+
+
+
+        cur.close()
+
+        conn.close()
+
+
+
+        return jsonify({
+
+            "sucesso":True,
+
+            "mensagem":
+            "Requisição concluída"
+
+        })
+
+
+
+
+
+    except Exception as e:
+
+
+        print(
+            "ERRO CONCLUIR REQUISIÇÃO:",
+            e
+        )
+
+
+        return jsonify({
+
+            "sucesso":False,
+
+            "mensagem":str(e)
+
+        }),500
+
+@app.route("/utilizadores")
+@login_required
+@utilizador_required
+def utilizadores():
+
+    empresa_id = session.get("empresa_id")
+
+
+    if not empresa_id:
+
+        return "Empresa não encontrada",401
+
+
+
+    conn = conectar()
+
+    cur = conn.cursor()
+
+
+
+    cur.execute("""
+        SELECT
+
+            uuid,
+
+            nome,
+
+            utilizador,
+
+            cargo,
+
+            telefone,
+
+            activo,
+
+            administrador
+
+
+        FROM utilizadores
+
+
+        WHERE empresa_id=%s
+
+
+        ORDER BY nome
+
+    """,
+    (
+        empresa_id,
+    ))
+
+
+    lista = cur.fetchall()
+
+
+
+    cur.close()
+
+    conn.close()
+
+
+
+    return render_template(
+
+        "utilizadores.html",
+
+        utilizadores=lista
+
+    )
+
+@app.route("/api/utilizador", methods=["POST"])
+@login_required
+@utilizador_required
+def salvar_utilizador():
+
+    try:
+
+        dados = request.json
+
+
+        empresa_id = session.get("empresa_id")
+
+
+
+        if not empresa_id:
+
+            return jsonify({
+
+                "sucesso":False,
+
+                "mensagem":"Empresa não encontrada"
+
+            })
+
+
+
+        nome = dados.get("nome","").upper()
+
+        utilizador = dados.get("utilizador","").lower()
+
+        senha = dados.get("senha","")
+
+        cargo = dados.get("cargo","").upper()
+
+        telefone = dados.get("telefone")
+
+        email = dados.get("email")
+
+        activo = dados.get("activo",True)
+
+        administrador = dados.get("administrador",False)
+
+
+
+        if not nome or not utilizador or not senha:
+
+
+            return jsonify({
+
+                "sucesso":False,
+
+                "mensagem":"Preencha os campos obrigatórios"
+
+            })
+
+
+
+        conn = conectar()
+
+        cur = conn.cursor()
+
+
+
+        # verificar duplicado
+
+        cur.execute("""
+            SELECT id
+
+            FROM utilizadores
+
+            WHERE utilizador=%s
+
+            AND empresa_id=%s
+
+        """,
+        (
+            utilizador,
+
+            empresa_id
+        ))
+
+
+
+        existe = cur.fetchone()
+
+
+
+        if existe:
+
+
+            return jsonify({
+
+                "sucesso":False,
+
+                "mensagem":"Este utilizador já existe"
+
+            })
+
+
+
+
+        novo_uuid = str(uuid.uuid4())
+
+
+
+        cur.execute("""
+        
+            INSERT INTO utilizadores
+
+            (
+
+                uuid,
+
+                empresa_id,
+
+                nome,
+
+                utilizador,
+
+                senha,
+
+                cargo,
+
+                telefone,
+
+                email,
+
+                activo,
+
+                administrador
+
+            )
+
+            VALUES
+
+            (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+
+        """,
+        (
+
+            novo_uuid,
+
+            empresa_id,
+
+            nome,
+
+            utilizador,
+
+            senha,
+
+            cargo,
+
+            telefone,
+
+            email,
+
+            activo,
+
+            administrador
+
+        ))
+
+
+
+        conn.commit()
+
+
+        cur.close()
+
+        conn.close()
+
+
+
+        return jsonify({
+
+            "sucesso":True
+
+        })
+
+
+    except Exception as e:
+
+
+        print("ERRO UTILIZADOR:",e)
+
+
+        return jsonify({
+
+            "sucesso":False,
+
+            "mensagem":str(e)
+
+        })
+
+@app.route("/api/utilizador/<uuid>")
+@login_required
+@utilizador_required
+def buscar_utilizador(uuid):
+
+
+    empresa_id=session.get("empresa_id")
+
+
+    conn=conectar()
+
+    cur=conn.cursor()
+
+
+
+    cur.execute("""
+        SELECT
+
+            uuid,
+
+            nome,
+
+            utilizador,
+
+            cargo,
+
+            telefone,
+
+            email,
+
+            activo,
+
+            administrador
+
+
+        FROM utilizadores
+
+
+        WHERE uuid=%s
+
+        AND empresa_id=%s
+
+    """,
+    (
+
+        uuid,
+
+        empresa_id
+
+    ))
+
+
+
+    u=cur.fetchone()
+
+
+
+    cur.close()
+
+    conn.close()
+
+
+
+    if not u:
+
+
+        return jsonify({})
+
+
+    return jsonify({
+
+        "uuid":str(u[0]),
+
+        "nome":u[1],
+
+        "utilizador":u[2],
+
+        "cargo":u[3],
+
+        "telefone":u[4],
+
+        "email":u[5],
+
+        "activo":u[6],
+
+        "administrador":u[7]
+
+    })
+
+@app.route("/api/utilizador/atualizar", methods=["POST"])
+@login_required
+@utilizador_required
+def atualizar_utilizador():
+
+
+    try:
+
+
+        dados=request.json
+
+
+        empresa_id=session.get("empresa_id")
+
+
+        uuid_user=dados.get("uuid")
+
+
+
+        conn=conectar()
+
+        cur=conn.cursor()
+
+
+
+        if dados.get("senha"):
+
+
+            cur.execute("""
+            
+            UPDATE utilizadores SET
+
+                nome=%s,
+
+                utilizador=%s,
+
+                senha=%s,
+
+                cargo=%s,
+
+                telefone=%s,
+
+                email=%s,
+
+                activo=%s,
+
+                administrador=%s
+
+
+            WHERE uuid=%s
+
+            AND empresa_id=%s
+
+
+            """,
+            (
+
+                dados["nome"].upper(),
+
+                dados["utilizador"].lower(),
+
+                dados["senha"],
+
+                dados["cargo"].upper(),
+
+                dados["telefone"],
+
+                dados["email"],
+
+                dados["activo"],
+
+                dados["administrador"],
+
+                uuid_user,
+
+                empresa_id
+
+            ))
+
+
+
+        else:
+
+
+            cur.execute("""
+            
+            UPDATE utilizadores SET
+
+                nome=%s,
+
+                utilizador=%s,
+
+                cargo=%s,
+
+                telefone=%s,
+
+                email=%s,
+
+                activo=%s,
+
+                administrador=%s
+
+
+            WHERE uuid=%s
+
+            AND empresa_id=%s
+
+
+            """,
+            (
+
+                dados["nome"].upper(),
+
+                dados["utilizador"].lower(),
+
+                dados["cargo"].upper(),
+
+                dados["telefone"],
+
+                dados["email"],
+
+                dados["activo"],
+
+                dados["administrador"],
+
+                uuid_user,
+
+                empresa_id
+
+            ))
+
+
+
+        conn.commit()
+
+
+        cur.close()
+
+        conn.close()
+
+
+
+        return jsonify({
+
+            "sucesso":True
+
+        })
+
+
+    except Exception as e:
+
+
+        return jsonify({
+
+            "sucesso":False,
+
+            "mensagem":str(e)
+
+        })
+    
+@app.route("/entrada_utilizador")
+def entrada_utilizador():
+
+    if "login_id" not in session:
+
+        return redirect("/login")
+
+
+    empresa_id = session.get("empresa_id")
+
+
+    conn = conectar()
+
+    cur = conn.cursor()
+
+
+    cur.execute("""
+        SELECT
+            uuid,
+            nome
+        FROM utilizadores
+        WHERE empresa_id=%s
+        AND activo=true
+        ORDER BY nome
+    """,
+    (
+        empresa_id,
+    ))
+
+
+    utilizadores=[]
+
+
+    for u in cur.fetchall():
+
+        utilizadores.append({
+
+            "uuid":str(u[0]),
+
+            "nome":u[1]
+
+        })
+
+
+    cur.close()
+
+    conn.close()
+
+
+
+    return render_template(
+
+        "entrada_utilizador.html",
+
+        empresa=session.get("empresa_nome",""),
+
+        utilizadores=utilizadores
+
+    )
+
+def carregar_permissoes(usuario_uuid, empresa_id):
+
+    try:
+
+        conn = conectar()
+
+        cur = conn.cursor()
+
+
+        cur.execute("""
+            SELECT
+
+                janela
+
+            FROM permissoes
+
+            WHERE usuario_uuid=%s
+
+            AND empresa_id=%s
+
+            AND permitido=true
+
+        """,
+        (
+            usuario_uuid,
+            empresa_id
+        ))
+
+
+        dados = cur.fetchall()
+
+
+
+        permissoes = []
+
+
+        for p in dados:
+
+            permissoes.append(
+                p[0]
+            )
+
+
+
+        cur.close()
+
+        conn.close()
+
+
+        return permissoes
+
+
+
+    except Exception as e:
+
+
+        print(
+            "ERRO AO CARREGAR PERMISSÕES:",
+            e
+        )
+
+
+        return []
+@app.route("/api/login_utilizador", methods=["POST"])
+def login_utilizador():
+
+    try:
+
+        dados = request.get_json()
+
+        print(dados)
+
+        
+
+        if not dados:
+
+            return jsonify({
+
+                "sucesso": False,
+
+                "mensagem": "Dados inválidos."
+
+            }), 400
+
+        empresa_id = session.get("empresa_id")
+
+        if not empresa_id:
+
+            return jsonify({
+
+                "sucesso": False,
+
+                "mensagem": "Sessão da empresa inválida."
+
+            }), 401
+
+        usuario_uuid = dados.get("usuario_uuid")
+
+        senha = str(
+            dados.get("senha","")
+        ).strip()
+
+        if not usuario_uuid:
+            return jsonify({
+
+                "sucesso":False,
+
+                "mensagem":"Informe o utilizador."
+
+            })
+
+        if not senha:
+            return jsonify({
+
+                "sucesso":False,
+
+                "mensagem":"Informe a palavra-passe."
+
+            })
+        conn = conectar()
+
+        cur = conn.cursor()
+
+        print("UUID RECEBIDO:", usuario_uuid)
+
+        print("EMPRESA RECEBIDA:", empresa_id)
+
+
+
+
+        # ===============================
+        # BUSCAR UTILIZADOR
+        # ===============================
+
+        cur.execute("""
+            SELECT
+
+                uuid,
+
+                nome,
+
+                utilizador,
+
+                senha,
+
+                cargo,
+
+                telefone,
+
+                email,
+
+                administrador,
+
+                activo,
+
+                empresa_id
+
+
+            FROM public.utilizadores
+
+
+            WHERE uuid::text=%s
+
+            LIMIT 1
+
+        """,
+        (
+            str(usuario_uuid),
+        ))
+
+
+
+        u = cur.fetchone()
+
+
+        print(
+            "UTILIZADOR ENCONTRADO:",
+            u
+        )
+
+
+
+
+        if not u:
+
+
+            cur.close()
+
+            conn.close()
+
+
+            return jsonify({
+
+                "sucesso":False,
+
+                "mensagem":"Utilizador não encontrado."
+
+            })
+
+
+
+
+
+        # ===============================
+        # CONFIRMAR EMPRESA
+        # ===============================
+
+
+        if int(u[9]) != int(empresa_id):
+
+
+            cur.close()
+
+            conn.close()
+
+
+            return jsonify({
+
+                "sucesso":False,
+
+                "mensagem":
+                "Utilizador não pertence a esta empresa."
+
+            })
+
+
+
+
+
+        # ===============================
+        # UTILIZADOR ACTIVO
+        # ===============================
+
+
+        if not u[8]:
+
+
+            cur.close()
+
+            conn.close()
+
+
+            return jsonify({
+
+                "sucesso":False,
+
+                "mensagem":
+                "Utilizador desativado."
+
+            })
+
+
+
+
+
+
+        # ===============================
+        # VALIDAR SENHA
+        # ===============================
+
+
+        senha_bd = str(
+            u[3] or ""
+        )
+
+
+
+        if senha_bd != senha:
+
+
+            cur.close()
+
+            conn.close()
+
+
+            return jsonify({
+
+                "sucesso":False,
+
+                "mensagem":
+                "Palavra-passe incorreta."
+
+            })
+
+
+
+
+
+
+
+        # ===============================
+        # CRIAR SESSÃO UTILIZADOR
+        # ===============================
+
+
+        session["usuario_uuid"] = str(u[0])
+
+        session["nome"] = u[1]
+
+        session["utilizador"] = u[2]
+
+        session["cargo"] = u[4]
+
+        session["telefone"] = u[5]
+
+        session["email"] = u[6]
+
+        session["administrador"] = bool(u[7])
+
+        # ===============================
+        # CARREGAR PERMISSÕES
+        # ===============================
+        if bool(u[7]):
+            session["permissoes"] = "TODAS"
+        else:
+            session["permissoes"] = carregar_permissoes(
+
+                str(u[0]),
+
+                empresa_id
+            )
+
+        print("UTILIZADOR:", u[1])
+        print("ADMIN:", u[7])
+        print("PERMISSOES CARREGADAS:", session["permissoes"])
+        print(
+            "PERMISSÕES:",
+            session["permissoes"]
+        )
+        cur.close()
+
+        conn.close()
+
+        # ===============================
+        # PÁGINA INICIAL
+        # ===============================
+
+        if session["permissoes"] == "TODAS":
+
+            pagina = "/painel"
+
+        else:
+
+            mapa = {
+
+                "painel": "/painel",
+
+                "produtos": "/produtos",
+
+                "vendas": "/vendas",
+
+                "tickets": "/tickets",
+
+                "relatorios": "/relatorios",
+
+                "stock": "/stock",
+
+                "vendas_online": "/vendas_online",
+
+                "compras": "/compras",
+
+                "fornecedores": "/fornecedores",
+
+                "requisicoes": "/requisicoes",
+
+                "sectores": "/sectores",
+
+                "fiel_armazem": "/fiel_armazem",
+
+                "utilizadores": "/utilizadores",
+
+                "permissoes": "/permissoes"
+
+            }
+
+            pagina = "/sem_permissao"
+
+            for p in session["permissoes"]:
+
+                if p in mapa:
+
+                    pagina = mapa[p]
+
+                    break
+
+        return jsonify({
+
+            "sucesso": True,
+
+            "nome": u[1],
+
+            "cargo": u[4],
+
+            "pagina": pagina
+
+        })
+
+    except Exception as e:
+
+
+        print(
+            "ERRO LOGIN UTILIZADOR:",
+            e
+        )
+
+
+        return jsonify({
+
+            "sucesso":False,
+
+            "mensagem":str(e)
+
+        }),500
+    
+                    ## PERMISSOES ##
+#################################################################    
+JANELAS_SISTEMA = [
+
+    "painel",
+
+    "produtos",
+
+    "vendas",
+
+    "tickets",
+
+    "relatorios",
+
+    "stock",
+
+    "vendas_online",
+
+    "compras",
+
+    "fornecedores",
+
+    "requisicoes",
+
+    "sectores",
+
+    "fiel_armazem",
+
+    "utilizadores",
+
+    "permissoes"
+
+]
+
+@app.route("/permissoes")
+@login_required
+def permissoes():
+
+    empresa_id=session["empresa_id"]
+
+
+    conn=conectar()
+
+    cur=conn.cursor()
+
+
+    cur.execute("""
+        SELECT
+            uuid,
+            nome
+
+        FROM utilizadores
+
+        WHERE empresa_id=%s
+
+        ORDER BY nome
+
+    """,
+    (
+        empresa_id,
+    ))
+
+
+    utilizadores=cur.fetchall()
+
+
+    cur.close()
+    conn.close()
+
+
+    return render_template(
+
+        "permissoes.html",
+
+        utilizadores=utilizadores,
+
+        janelas=JANELAS_SISTEMA
+
+    )
+
+@app.route("/api/permissoes/<usuario_uuid>")
+@login_required
+def buscar_permissoes(usuario_uuid):
+
+    try:
+
+        empresa_id = session.get("empresa_id")
+
+
+        conn = conectar()
+
+        cur = conn.cursor()
+
+
+
+        cur.execute("""
+            SELECT
+
+                janela
+
+            FROM permissoes
+
+            WHERE usuario_uuid=%s
+
+            AND empresa_id=%s
+
+            AND permitido=true
+
+        """,
+        (
+            usuario_uuid,
+            empresa_id
+        ))
+
+
+
+        dados = cur.fetchall()
+
+
+
+        permissoes = []
+
+
+        for p in dados:
+
+            permissoes.append(
+                p[0]
+            )
+
+
+
+        cur.close()
+
+        conn.close()
+
+
+
+        return jsonify(permissoes)
+
+
+
+    except Exception as e:
+
+
+        print(
+            "ERRO BUSCAR PERMISSOES:",
+            e
+        )
+
+
+        return jsonify([]),500
+
+def tem_permissao(janela):
+
+
+    permissoes = session.get(
+        "permissoes",
+        []
+    )
+
+    # ADMINISTRADOR
+
+    if permissoes == "TODAS":
+
+        return True
+
+
+
+    return janela in permissoes
+
+@app.context_processor
+def inject_permissoes():
+
+    return dict(
+
+        tem_permissao=tem_permissao
+
+    )
+
+
+@app.route("/api/salvar_permissoes", methods=["POST"])
+@login_required
+def salvar_permissoes():
+
+    try:
+
+
+        dados = request.get_json()
+
+
+        empresa_id = session.get("empresa_id")
+
+
+
+        usuario_uuid = dados.get(
+            "usuario_uuid"
+        )
+
+
+        permissoes = dados.get(
+            "permissoes",
+            []
+        )
+
+
+
+        if not usuario_uuid:
+
+
+            return jsonify({
+
+                "sucesso":False,
+
+                "mensagem":
+                "Utilizador não informado"
+
+            })
+
+
+
+
+        conn = conectar()
+
+        cur = conn.cursor()
+
+
+
+        # =============================
+        # APAGAR PERMISSÕES ANTIGAS
+        # =============================
+
+
+        cur.execute("""
+            DELETE FROM permissoes
+
+            WHERE usuario_uuid=%s
+
+            AND empresa_id=%s
+
+        """,
+        (
+            usuario_uuid,
+
+            empresa_id
+        ))
+
+
+
+
+
+        # =============================
+        # INSERIR NOVAS
+        # =============================
+
+
+        for janela in permissoes:
+
+
+            cur.execute("""
+                INSERT INTO permissoes
+                (
+                    uuid,
+                    empresa_id,
+                    usuario_uuid,
+                    janela,
+                    permitido
+                )
+
+                VALUES
+                (
+                    %s,
+                    %s,
+                    %s,
+                    %s,
+                    true
+                )
+
+            """,
+            (
+                str(uuid.uuid4()),
+
+                empresa_id,
+
+                usuario_uuid,
+
+                janela
+
+            ))
+
+
+
+
+
+        conn.commit()
+
+
+        cur.close()
+
+        conn.close()
+
+
+
+        return jsonify({
+
+            "sucesso":True,
+
+            "mensagem":
+            "Permissões guardadas com sucesso"
+
+        })
+
+
+
+
+    except Exception as e:
+
+
+        print(
+            "ERRO SALVAR PERMISSOES:",
+            e
+        )
+
+
+        return jsonify({
+
+            "sucesso":False,
+
+            "mensagem":str(e)
+
+        }),500
+
+    
+
 from flask import session, request, redirect
 @app.before_request
 def proteger_rotas():
@@ -3453,6 +6280,7 @@ def proteger_rotas():
         "api_compras_get",
         "api_compras",
         "salvar_compra",
+        "requisicoes",
     ]
     print("PATH:", request.path)
     print("ENDPOINT:", repr(request.endpoint))
@@ -3469,3 +6297,4 @@ def proteger_rotas():
 # ======================================================
 if __name__ == "__main__":
     app.run(debug=True, host="0.0.0.0", port=3000)
+

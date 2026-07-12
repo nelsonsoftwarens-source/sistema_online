@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="pt">
+
+<head>
+
+<meta charset="UTF-8">
+
+<title>Entrada Utilizador</title>
+
+
+<style>
+
+body {
+
+    font-family: Arial;
+
+    background:#1d4ed8;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    height:100vh;
+
+    margin:0;
+
+}
+
+
+.box {
+
+    background:white;
+
+    padding:30px;
+
+    border-radius:10px;
+
+    width:320px;
+
+}
+
+
+h2 {
+
+    text-align:center;
+
+}
+
+
+.empresa {
+
+    text-align:center;
+
+    color:#555;
+
+    margin-bottom:20px;
+
+}
+
+
+select,
+input {
+
+    width:100%;
+
+    padding:10px;
+
+    margin:10px 0;
+
+    box-sizing:border-box;
+
+    border:1px solid #ccc;
+
+    border-radius:5px;
+
+}
+
+
+
+button {
+
+    width:100%;
+
+    padding:10px;
+
+    background:#1d4ed8;
+
+    color:white;
+
+    border:none;
+
+    border-radius:5px;
+
+    cursor:pointer;
+
+}
+
+
+.mostrar {
+
+    display:flex;
+
+    align-items:center;
+
+    gap:5px;
+
+    font-size:13px;
+
+}
+
+
+.mostrar input {
+
+    width:auto;
+
+}
+
+
+
+</style>
+
+
+</head>
+
+
+<body>
+
+
+<div class="box">
+
+
+<h2>
+Login ERP
+</h2>
+
+
+<div class="empresa">
+
+{{ empresa }}
+
+</div>
+
+
+
+<form id="formLogin">
+
+
+<select id="utilizador">
+
+
+<option value="">
+Selecione o utilizador
+</option>
+
+
+{% for u in utilizadores %}
+
+<option value="{{u.uuid}}">
+
+{{u.nome}}
+
+</option>
+
+
+{% endfor %}
+
+
+</select>
+
+
+
+
+<input
+
+type="password"
+
+id="senha"
+
+placeholder="Senha"
+
+>
+
+
+
+
+<div class="mostrar">
+
+
+<input
+
+type="checkbox"
+
+id="verSenha"
+
+
+>
+
+<label>
+
+Mostrar senha
+
+</label>
+
+
+</div>
+
+
+
+<button>
+
+Entrar
+
+</button>
+
+
+</form>
+
+
+</div>
+
+
+
+<script>
+
+
+document
+.getElementById("verSenha")
+.addEventListener(
+"change",
+function(){
+
+
+let campo =
+document.getElementById("senha");
+
+
+campo.type =
+this.checked
+?
+"text"
+:
+"password";
+
+
+});
+
+
+
+
+
+document
+.getElementById("formLogin")
+.addEventListener(
+"submit",
+function(e){
+
+
+e.preventDefault();
+
+
+
+fetch(
+"/api/login_utilizador",
+{
+
+
+method:"POST",
+
+
+headers:{
+
+"Content-Type":
+"application/json"
+
+},
+
+
+body:JSON.stringify({
+
+    usuario_uuid:
+
+    document.getElementById("utilizador").value,
+
+
+    senha:
+
+    document.getElementById("senha").value
+
+})
+
+
+
+}
+
+)
+
+.then(r=>r.json())
+
+
+.then(d=>{
+
+
+if(d.sucesso){
+
+
+window.location = d.pagina;
+
+}else{
+
+
+alert(d.mensagem);
+
+
+}
+
+
+
+});
+
+
+});
+
+
+
+</script>
+
+
+
+</body>
+
+</html>

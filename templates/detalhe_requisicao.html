@@ -1,0 +1,538 @@
+{% extends 'base.html' %}
+
+
+{% block conteudo %}
+
+
+<div class="container-fluid mt-3">
+
+
+<!-- ==========================
+     CABEÇALHO
+========================== -->
+
+
+<div class="card shadow-sm mb-3">
+
+
+<div class="card-body">
+
+
+<div class="d-flex justify-content-between align-items-center">
+
+
+<div>
+
+
+<h3>
+
+📦 Atendimento de Requisição
+
+</h3>
+
+
+<p class="text-muted mb-0">
+
+
+Número:
+<strong>
+{{ requisicao[0] }}
+</strong>
+
+
+<br>
+
+
+Sector:
+<strong>
+{{ requisicao[1] }}
+</strong>
+
+
+</p>
+
+
+</div>
+
+
+
+<div>
+
+
+{% if requisicao[2]=="PENDENTE" %}
+
+
+<span class="badge bg-warning fs-6">
+
+PENDENTE
+
+</span>
+
+
+{% else %}
+
+
+<span class="badge bg-success fs-6">
+
+CONCLUÍDO
+
+</span>
+
+
+{% endif %}
+
+
+
+</div>
+
+
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+<!-- ==========================
+     PRODUTOS
+========================== -->
+
+
+<div class="card shadow-sm">
+
+
+<div class="card-body">
+
+
+<table class="table table-hover align-middle">
+
+
+<thead class="table-light">
+
+
+<tr>
+
+
+<th>
+Produto
+</th>
+
+
+<th>
+Qtd Pedida
+</th>
+
+
+<th>
+Qtd Entregue
+</th>
+
+
+<th>
+Qtd Recusada
+</th>
+
+
+<th>
+Motivo
+</th>
+
+
+</tr>
+
+
+</thead>
+
+
+
+<tbody>
+
+
+{% for item in itens %}
+
+
+<tr>
+
+
+<td>
+
+
+{{item[1]}}
+
+
+</td>
+
+
+
+<td>
+
+
+{{item[2]}}
+
+
+</td>
+
+
+
+
+<td>
+
+<input
+
+type="number"
+
+class="form-control entregue"
+
+data-id="{{item[0]}}"
+
+data-pedida="{{item[2]}}"
+
+value="{{item[3] if item[3] is not none else item[2]}}"
+
+min="0"
+
+oninput="calcularQuantidade(this)"
+
+{% if requisicao[2]=="CONCLUIDO" %}
+disabled
+{% endif %}
+
+>
+
+</td>
+
+<td>
+
+<input
+
+type="number"
+
+class="form-control recusado"
+
+data-id="{{item[0]}}"
+
+data-pedida="{{item[2]}}"
+
+value="{{item[4] if item[4] is not none else 0}}"
+
+min="0"
+
+oninput="calcularQuantidade(this)"
+
+{% if requisicao[2]=="CONCLUIDO" %}
+disabled
+{% endif %}
+
+>
+
+</td>
+
+<td>
+
+
+<input
+
+
+type="text"
+
+
+class="form-control motivo"
+
+
+data-id="{{item[0]}}"
+
+
+value="{{item[5] or ''}}"
+
+
+placeholder="Motivo..."
+
+
+{% if requisicao[2]=="CONCLUIDO" %}
+
+disabled
+
+{% endif %}
+
+
+>
+
+
+</td>
+
+
+
+</tr>
+
+
+{% endfor %}
+
+
+
+</tbody>
+
+
+</table>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+
+
+<!-- ==========================
+     BOTÕES
+========================== -->
+
+
+{% if requisicao[2]=="PENDENTE" %}
+
+
+
+<div class="mt-3">
+
+
+<button
+
+
+class="btn btn-success btn-lg"
+
+
+onclick="confirmarRequisicao()"
+
+
+>
+
+
+✅ Confirmar Entrega
+
+
+</button>
+
+
+
+<a href="/fiel_armazem"
+
+class="btn btn-secondary btn-lg">
+
+
+⬅ Voltar
+
+
+</a>
+
+
+
+</div>
+
+
+
+{% else %}
+
+
+
+<div class="alert alert-success mt-3">
+
+
+Esta requisição já foi concluída.
+<br>
+
+Os dados estão disponíveis apenas para consulta.
+
+
+</div>
+
+
+<a href="/fiel_armazem"
+
+class="btn btn-secondary">
+
+
+⬅ Voltar
+
+
+</a>
+
+
+
+{% endif %}
+
+
+
+</div>
+
+
+
+
+
+
+<script>
+
+
+function confirmarRequisicao(){
+
+
+
+let itens=[];
+
+
+
+document.querySelectorAll(".entregue")
+.forEach(function(el){
+
+
+let id=el.dataset.id;
+
+
+let entregue=parseFloat(el.value)||0;
+
+
+
+let recusado=document
+
+.querySelector(
+
+'.recusado[data-id="'+id+'"]'
+
+)
+
+.value;
+
+
+
+let motivo=document
+
+.querySelector(
+
+'.motivo[data-id="'+id+'"]'
+
+)
+
+.value;
+
+
+
+
+itens.push({
+
+id:id,
+
+entregue:entregue,
+
+recusado:
+parseFloat(recusado)||0,
+
+motivo:motivo
+
+
+});
+
+
+
+});
+
+
+
+
+
+
+fetch(
+
+"/api/concluir_requisicao",
+
+{
+
+
+method:"POST",
+
+
+headers:{
+
+
+"Content-Type":
+
+"application/json"
+
+
+},
+
+
+body:JSON.stringify({
+
+
+requisicao_uuid:
+
+"{{uuid}}",
+
+
+itens:itens
+
+
+})
+
+
+}
+
+
+)
+
+
+
+.then(r=>r.json())
+
+
+.then(d=>{
+
+
+if(d.sucesso){
+
+
+alert(
+
+"Requisição concluída com sucesso!"
+
+);
+
+
+location.href="/fiel_armazem";
+
+
+}
+
+else{
+
+
+alert(
+
+d.mensagem
+
+);
+
+
+}
+
+
+
+});
+
+
+
+}
+</script>
+
+<script src="{{ url_for('static', filename='js/calculo_detalhes.js') }}"></script>
+
+{% endblock %}

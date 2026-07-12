@@ -1,0 +1,220 @@
+{% extends 'base.html' %}
+
+
+{% block conteudo %}
+
+
+<div class="container-fluid mt-3">
+
+
+<div class="card shadow">
+
+
+<div class="card-header">
+
+<h3>
+🏢 Sectores
+</h3>
+
+</div>
+
+
+
+<div class="card-body">
+
+
+
+<div class="row mb-3">
+
+
+<div class="col-md-5">
+
+
+<input
+
+id="nomeSector"
+
+class="form-control"
+
+placeholder="Nome do sector"
+
+
+>
+
+
+</div>
+
+
+
+<div class="col-md-2">
+
+
+<button
+
+onclick="salvarSector()"
+
+class="btn btn-success">
+
+💾 Guardar
+
+</button>
+
+
+</div>
+
+
+</div>
+
+
+
+
+
+<table class="table table-hover">
+
+
+<thead>
+
+<tr>
+
+<th>
+Sector
+</th>
+
+<th>
+Estado
+</th>
+
+</tr>
+
+</thead>
+
+
+
+<tbody>
+
+
+{% for s in sectores %}
+
+
+<tr>
+
+
+<td>
+
+{{s[1]}}
+
+</td>
+
+
+<td>
+
+{% if s[2] %}
+
+<span class="badge bg-success">
+Activo
+</span>
+
+
+{% else %}
+
+<span class="badge bg-danger">
+Inactivo
+</span>
+
+
+{% endif %}
+
+
+</td>
+
+
+</tr>
+
+
+{% endfor %}
+
+
+</tbody>
+
+
+</table>
+
+
+
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+
+
+<script>
+
+
+function salvarSector(){
+
+
+let nome =
+document.getElementById(
+"nomeSector"
+).value;
+
+
+
+fetch(
+"/api/salvar_sector",
+{
+
+method:"POST",
+
+headers:{
+
+"Content-Type":
+"application/json"
+
+},
+
+body:JSON.stringify({
+
+nome:nome
+
+})
+
+
+})
+
+.then(r=>r.json())
+
+.then(d=>{
+
+
+if(d.sucesso){
+
+location.reload();
+
+
+}else{
+
+
+alert(d.mensagem);
+
+
+}
+
+
+});
+
+
+}
+
+
+
+</script>
+
+
+{% endblock %}

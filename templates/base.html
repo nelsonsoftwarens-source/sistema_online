@@ -13,113 +13,476 @@
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
           rel="stylesheet">
 
+    <style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:'Poppins',sans-serif;
+}
+
+body{
+
+    min-height:100vh;
+
+    background:
+    linear-gradient(
+        135deg,
+        #0f172a 0%,
+        #1e40af 35%,
+        #2563eb 65%,
+        #38bdf8 100%
+    );
+
+}
+
+/* ===========================
+   TOPBAR
+=========================== */
+
+.top-menu{
+
+    position:fixed;
+
+    top:0;
+    left:0;
+
+    width:100%;
+
+    z-index:9999;
+
+    background:#1e3a8a;
+
+    color:#fff;
+
+    height:65px;
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    padding:0 25px;
+
+    box-shadow:0 3px 10px rgba(0,0,0,.15);
+
+}
+
+.logo{
+
+    font-size:22px;
+    font-weight:700;
+
+}
+
+
+/* ===========================
+MENU
+=========================== */
+
+.nav{
+
+    display:flex;
+    align-items:center;
+    gap:5px;
+
+}
+
+.dropdown{
+
+    position:relative;
+
+}
+
+.dropbtn{
+
+    color:#fff;
+    text-decoration:none;
+
+    padding:20px 18px;
+
+    display:block;
+
+    cursor:pointer;
+
+    transition:.3s;
+
+    font-size:14px;
+
+}
+
+.dropbtn:hover{
+
+    background:#2748aa;
+
+}
+
+.dropdown-content{
+
+    display:none;
+
+    position:absolute;
+
+    top:60px;
+
+    left:0;
+
+    min-width:250px;
+
+    background:#fff;
+
+    border-radius:8px;
+
+    box-shadow:0 8px 25px rgba(0,0,0,.15);
+
+    overflow:hidden;
+
+    z-index:999;
+
+}
+
+.dropdown-content a{
+
+    display:block;
+
+    color:#444;
+
+    text-decoration:none;
+
+    padding:12px 18px;
+
+    transition:.2s;
+
+}
+
+.dropdown-content a:hover{
+
+    background:#eef4ff;
+
+    color:#1d4ed8;
+
+}
+
+.dropdown:hover .dropdown-content{
+
+    display:block;
+
+}
+
+/* ===========================
+USER
+=========================== */
+
+.user-area{
+
+    display:flex;
+    align-items:center;
+    gap:15px;
+
+}
+
+.user-name{
+
+    font-size:14px;
+
+}
+
+.usuario-topo{
+
+    font-size:14px;
+
+    font-weight:400;
+
+    opacity:.85;
+
+    margin-left:10px;
+
+}
+
+.logout{
+
+    background:#ef4444;
+    color:white;
+    padding:9px 18px;
+    text-decoration:none;
+    border-radius:6px;
+    font-size:13px;
+    transition:.3s;
+
+}
+
+.logout:hover{
+
+    background:#dc2626;
+
+}
+
+/* ===========================
+MAIN
+=========================== */
+
+.main{
+
+    width:100%;
+
+    padding-top:180px;
+
+    padding-left:30px;
+
+    padding-right:30px;
+
+}
+
+.page-title{
+
+    position:fixed;
+
+    top:65px;
+
+    left:0;
+
+    width:100%;
+
+    height:90px;
+
+    padding:18px 30px;
+
+    background:rgba(15,23,42,.75);
+
+    backdrop-filter:blur(12px);
+
+    z-index:900;
+
+    margin:0;
+
+}
+
+.page-title h2{
+
+    font-size:30px;
+
+    color:white;
+
+    font-weight:700;
+
+}
+
+
+.subtitulo{
+
+    color:rgba(255,255,255,.80);
+
+}
+
+    </style>
+
 </head>
 
 <body>
 
-<div class="layout">
+<!-- ========================================================= -->
+<!-- MENU SUPERIOR -->
+<!-- ========================================================= -->
 
-    <!-- ====================================== -->
-    <!-- SIDEBAR -->
-    <!-- ====================================== -->
+<div class="top-menu">
 
-    <div class="sidebar">
 
-        <!-- LOGO -->
-        <div class="logo">
+    <div class="nav">
 
-            <h1>{{ empresa_nome }}</h1>
+        <!-- DASHBOARD -->
 
-        </div>
-        
-        <!-- FOOTER SIDEBAR -->
-        <div class="sidebar-footer">
+        <div class="dropdown">
 
-            <div class="usuario-logado">
+            <div class="dropbtn">
+                📊 Dashboard
+            </div>
 
-                {{ session.get('empresa_nome') }}
+            <div class="dropdown-content">
+
+                {% if tem_permissao('painel') %}
+                <a href="/painel">
+                    📊 Painel
+                </a>
+                {% endif %}
 
             </div>
 
-            <a href="/logout" class="btn-logout">
-                🚪 Terminar Sessão
-            </a>
-
         </div>
-        <!-- MENU -->
-        <div class="menu">
 
-            <a href="/painel" class="menu-item">
-                📊 Painel
-            </a>
+        <!-- VENDAS -->
 
-            <a href="/produtos" class="menu-item">
-                📦 Produtos
-            </a>
+        <div class="dropdown">
 
-            <a href="/vendas" class="menu-item">
-                💰 Vendas
-            </a>
+            <div class="dropbtn">
+                💰 Comercial
+            </div>
 
-            <a href="/tickets" class="menu-item">
-                🎫 Tickets
-            </a>
+            <div class="dropdown-content">
 
-            <a href="/relatorios" class="menu-item">
-                📈 Relatórios
-            </a>
+                {% if tem_permissao('vendas') %}
+                <a href="/vendas">
+                    💰 Vendas
+                </a>
+                {% endif %}
 
-            <a href="/stock" class="menu-item">
-                📦 Stock
-            </a>
+                {% if tem_permissao('tickets') %}
+                <a href="/tickets">
+                    🎫 Tickets
+                </a>
+                {% endif %}
 
-            <a href="/vendas_online" class="menu-item">
-                💰 Relatorio Vendas
-            </a>
+                {% if tem_permissao('vendas_online') %}
+                <a href="/vendas_online">
+                    📈 Relatório de Vendas
+                </a>
+                {% endif %}
 
-            <a href="/compras" class="menu-item">
-                👩🏻‍💻 Compras
-            </a>
-
-            <a href="/fornecedores" class="menu-item">
-                🚚 Fornecedores
-            </a>
+            </div>
 
         </div>
 
+        <!-- STOCK -->
+
+        <div class="dropdown">
+
+            <div class="dropbtn">
+                📦 Armazém
+            </div>
+
+            <div class="dropdown-content">
+
+                {% if tem_permissao('produtos') %}
+                <a href="/produtos">
+                    📦 Produtos
+                </a>
+                {% endif %}
+
+                {% if tem_permissao('stock') %}
+                <a href="/stock">
+                    📊 Stock
+                </a>
+                {% endif %}
+
+                {% if tem_permissao('compras') %}
+                <a href="/compras">
+                    👩🏻‍💻 Compras
+                </a>
+                {% endif %}
+
+                {% if tem_permissao('fornecedores') %}
+                <a href="/fornecedores">
+                    🚚 Fornecedores
+                </a>
+                {% endif %}
+
+                {% if tem_permissao('requisicoes') %}
+                <a href="/requisicoes">
+                    🏙 Requisições
+                </a>
+                {% endif %}
+
+                {% if tem_permissao('sectores') %}
+                <a href="/sectores">
+                    🏭 Sectores
+                </a>
+                {% endif %}
+
+                {% if tem_permissao('fiel_armazem') %}
+                <a href="/fiel_armazem">
+                    👨‍💼 Fiel de Armazém
+                </a>
+                {% endif %}
+
+            </div>
+
+        </div>
+
+        <!-- ADMIN -->
+
+        <div class="dropdown">
+
+            <div class="dropbtn">
+                ⚙ Administração
+            </div>
+
+            <div class="dropdown-content">
+
+                {% if tem_permissao('utilizadores') %}
+                <a href="/utilizadores">
+                    👥 Utilizadores
+                </a>
+                {% endif %}
+
+                {% if tem_permissao('permissoes') %}
+                <a href="/permissoes">
+                    🔒 Permissões
+                </a>
+                {% endif %}
+
+                {% if tem_permissao('relatorios') %}
+                <a href="/relatorios">
+                    📈 Relatórios
+                </a>
+                {% endif %}
+
+            </div>
+
+        </div>
 
     </div>
 
-    <!-- ====================================== -->
-    <!-- MAIN -->
-    <!-- ====================================== -->
+    <div class="user-area">
 
-    <div class="main">
+        <div class="user-name">
 
-        <!-- TOPBAR -->
-        <div class="topbar">
-
-            <div>
-
-                <h2>
-                    Sistema de Gestão
-                </h2>
-
-                <span class="subtitulo">
-                    Painel Administrativo
-                </span>
-
-            </div>
+            {{ session.get('empresa_nome') }}
 
         </div>
 
-        <!-- CONTENT -->
-        <div class="content">
+        {% if utilizador_logado %}
 
-            {% block conteudo %}
-            {% endblock %}
+        <div class="usuario-topo">
+
+            | 👤 {{ utilizador_logado }}
 
         </div>
+
+        {% endif %}
+
+        <a href="/logout" class="logout">
+
+            🚪 Terminar Sessão
+
+        </a>
+
+    </div>
+
+</div>
+
+<!-- ========================================================= -->
+<!-- CONTEÚDO -->
+<!-- ========================================================= -->
+
+<div class="main">
+
+    <div class="page-title">
+
+        <h2>
+            Sistema de Gestão
+        </h2>
+
+        <div class="subtitulo">
+            Painel Administrativo
+        </div>
+
+    </div>
+
+    <div class="content">
+
+        {% block conteudo %}
+        {% endblock %}
 
     </div>
 

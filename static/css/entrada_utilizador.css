@@ -1,0 +1,204 @@
+/* ===========================================
+   LOGIN UTILIZADOR
+=========================================== */
+
+.login-utilizador-page{
+
+    width:100%;
+    min-height:100vh;
+
+    display:flex;
+
+    justify-content:center;
+
+    align-items:center;
+
+    background:#eef2f7;
+
+    padding:30px;
+
+}
+
+
+/* ============================= */
+
+.login-utilizador-card{
+
+    width:100%;
+    max-width:430px;
+
+    background:#ffffff;
+
+    border-radius:18px;
+
+    overflow:hidden;
+
+    box-shadow:0 15px 40px rgba(0,0,0,.12);
+
+}
+
+
+/* ============================= */
+
+.login-header{
+
+    background:linear-gradient(135deg,#0d6efd,#0b5ed7);
+
+    color:white;
+
+    text-align:center;
+
+    padding:30px;
+
+}
+
+
+.logo-login{
+
+    width:90px;
+    height:90px;
+
+    object-fit:contain;
+
+    margin-bottom:15px;
+
+}
+
+
+.login-header h2{
+
+    margin:0;
+
+    font-weight:bold;
+
+    letter-spacing:1px;
+
+}
+
+
+.login-header h5{
+
+    margin-top:10px;
+
+    font-weight:normal;
+
+    opacity:.95;
+
+}
+
+
+.empresa-login{
+
+    margin-top:15px;
+
+    font-size:15px;
+
+    background:rgba(255,255,255,.18);
+
+    border-radius:8px;
+
+    padding:8px;
+
+}
+
+
+/* ============================= */
+
+.login-body{
+
+    padding:30px;
+
+}
+
+
+.login-body label{
+
+    font-weight:600;
+
+    margin-bottom:6px;
+
+}
+
+
+.login-body input{
+
+    height:48px;
+
+    border-radius:10px;
+
+    font-size:15px;
+
+}
+
+
+.login-body input:focus{
+
+    border-color:#0d6efd;
+
+    box-shadow:0 0 0 .2rem rgba(13,110,253,.15);
+
+}
+
+
+/* ============================= */
+
+#btnEntrar{
+
+    height:50px;
+
+    font-size:17px;
+
+    font-weight:bold;
+
+    border-radius:10px;
+
+}
+
+
+/* ============================= */
+
+.login-footer{
+
+    text-align:center;
+
+    padding:15px;
+
+    border-top:1px solid #ececec;
+
+    color:#777;
+
+}
+
+
+/* ============================= */
+
+.form-check{
+
+    user-select:none;
+
+}
+
+
+/* ============================= */
+
+@media(max-width:768px){
+
+    .login-utilizador-card{
+
+        max-width:100%;
+
+    }
+
+    .login-header{
+
+        padding:20px;
+
+    }
+
+    .login-body{
+
+        padding:20px;
+
+    }
+
+}

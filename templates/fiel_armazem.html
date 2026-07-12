@@ -1,0 +1,265 @@
+{% extends 'base.html' %}
+
+
+{% block conteudo %}
+
+
+<div class="container-fluid mt-3">
+
+
+<div class="card shadow">
+
+
+<div class="card-header">
+
+
+<h3>
+
+📦 Fiel de Armazém
+
+</h3>
+
+
+</div>
+
+
+
+<div class="card-body">
+
+
+<table class="table table-hover"
+
+id="tabelaRequisicoes">
+
+
+<thead>
+
+
+<tr>
+
+<th>
+Número
+</th>
+
+<th>
+Sector
+</th>
+
+<th>
+Solicitante
+</th>
+
+<th>
+Estado
+</th>
+
+<th>
+Data
+</th>
+
+
+</tr>
+
+
+</thead>
+
+
+
+<tbody>
+
+
+{% for r in requisicoes %}
+
+
+<tr
+
+ondblclick="abrirRequisicao('{{r[0]}}')"
+
+style="cursor:pointer"
+
+
+>
+
+
+<td>
+
+{{r[1]}}
+
+</td>
+
+
+<td>
+
+{{r[2]}}
+
+</td>
+
+
+<td>
+
+{{r[3]}}
+
+</td>
+
+
+<td>
+
+
+{% if r[4]=='PENDENTE' %}
+
+
+<span class="badge bg-warning">
+
+Pendente
+
+</span>
+
+
+{% else %}
+
+
+<span class="badge bg-success">
+
+Concluído
+
+</span>
+
+
+{% endif %}
+
+
+</td>
+
+
+<td>
+
+{{r[5]}}
+
+</td>
+
+
+</tr>
+
+
+{% endfor %}
+
+
+
+</tbody>
+
+
+
+</table>
+
+
+</div>
+
+
+</div>
+
+
+</div>
+
+
+
+
+<script>
+
+
+function abrirRequisicao(uuid){
+
+
+window.location.href =
+"/fiel_armazem/"+uuid;
+
+
+}
+
+
+function calcularQuantidade(campo){
+
+
+    let id = campo.dataset.id;
+
+
+    let pedida = parseFloat(
+        campo.dataset.pedida
+    ) || 0;
+
+
+
+    let entregue = document.querySelector(
+        '.entregue[data-id="'+id+'"]'
+    );
+
+
+    let recusado = document.querySelector(
+        '.recusado[data-id="'+id+'"]'
+    );
+
+
+
+    let valor = parseFloat(
+        campo.value
+    ) || 0;
+
+
+
+
+    // Alterou entregue
+    if(campo.classList.contains("entregue")){
+
+
+        if(valor > pedida){
+
+            valor = pedida;
+
+            campo.value = pedida;
+
+        }
+
+
+        entregue.value = valor;
+
+
+        recusado.value =
+        pedida - valor;
+
+
+
+    }
+
+
+
+    // Alterou recusado
+    else {
+
+
+
+        if(valor > pedida){
+
+            valor = pedida;
+
+            campo.value = pedida;
+
+        }
+
+
+        recusado.value = valor;
+
+
+        entregue.value =
+        pedida - valor;
+
+
+
+    }
+
+
+
+}
+
+</script>
+
+
+{% endblock %}

@@ -1,0 +1,318 @@
+{% extends 'base.html' %}
+
+{% block conteudo %}
+
+<div class="permissoes-page">
+
+
+    <!-- CABEÇALHO -->
+    <div class="card-permissoes-header">
+
+        <div>
+
+            <h2>
+                🔐 Gestão de Permissões
+            </h2>
+
+            <small>
+                Controle as janelas disponíveis para cada utilizador
+            </small>
+
+        </div>
+
+
+        <button
+            class="btn-guardar-permissoes"
+            onclick="guardarPermissoes()">
+
+            💾 Guardar Permissões
+
+        </button>
+
+    </div>
+
+
+
+
+    <!-- UTILIZADOR -->
+
+    <div class="card-permissoes">
+
+        <label>
+            Selecionar Utilizador
+        </label>
+
+
+        <select
+            id="usuario_uuid"
+            onchange="carregarPermissoes()">
+
+
+            <option value="">
+                Selecione o utilizador
+            </option>
+
+
+            {% for u in utilizadores %}
+
+            <option value="{{u[0]}}">
+
+                {{u[1]}}
+
+            </option>
+
+
+            {% endfor %}
+
+
+        </select>
+
+
+    </div>
+
+
+
+
+
+    <!-- LISTA DE PERMISSÕES -->
+
+    <div class="card-permissoes">
+
+
+        <h3>
+            📂 Janelas do Sistema
+        </h3>
+
+
+
+        <div class="grid-permissoes">
+
+
+            {% for j in janelas %}
+
+
+            <div class="permissao-item">
+
+
+                <label>
+
+
+                    <input
+
+                        type="checkbox"
+
+                        class="check-permissao"
+
+                        value="{{j}}"
+
+                        data-modulo="{{j}}"
+
+                    >
+
+
+                    <span>
+
+                        {{j|capitalize}}
+
+                    </span>
+
+
+                </label>
+
+
+            </div>
+
+
+            {% endfor %}
+
+
+        </div>
+
+
+    </div>
+
+
+
+</div>
+
+
+
+
+
+<script>
+
+
+function carregarPermissoes(){
+
+
+    let usuario =
+    document.getElementById(
+        "usuario_uuid"
+    ).value;
+
+
+
+    if(!usuario){
+
+        return;
+
+    }
+
+
+
+    fetch(
+        "/api/permissoes/"+usuario
+    )
+
+    .then(r=>r.json())
+
+    .then(d=>{
+
+
+        document
+        .querySelectorAll(
+            ".check-permissao"
+        )
+
+        .forEach(check=>{
+
+
+            let modulo =
+            check.dataset.modulo;
+
+
+
+            check.checked =
+            d.includes(modulo);
+
+
+
+        });
+
+
+
+    });
+
+
+}
+
+
+
+
+
+function guardarPermissoes(){
+
+
+    let usuario =
+    document.getElementById(
+        "usuario_uuid"
+    ).value;
+
+
+
+    if(!usuario){
+
+
+        alert(
+            "Selecione o utilizador"
+        );
+
+        return;
+
+
+    }
+
+
+
+
+    let permissoes=[];
+
+
+
+    document
+    .querySelectorAll(
+        ".check-permissao:checked"
+    )
+
+    .forEach(c=>{
+
+
+        permissoes.push(
+            c.value
+        );
+
+
+    });
+
+
+
+
+
+    fetch(
+        "/api/salvar_permissoes",
+        {
+
+
+            method:"POST",
+
+
+            headers:{
+
+
+                "Content-Type":
+                "application/json"
+
+
+            },
+
+
+            body:JSON.stringify({
+
+                usuario_uuid:usuario,
+
+                permissoes:permissoes
+
+            })
+
+
+        }
+
+    )
+
+
+    .then(r=>r.json())
+
+
+    .then(d=>{
+
+
+        if(d.sucesso){
+
+
+            alert(
+                "Permissões guardadas!"
+            );
+
+
+        }else{
+
+
+            alert(
+                d.mensagem
+            );
+
+
+        }
+
+
+    });
+
+
+
+}
+
+
+</script>
+
+
+{% endblock %}

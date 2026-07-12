@@ -1,0 +1,255 @@
+/* =====================================
+   PÁGINA PERMISSÕES
+===================================== */
+
+
+.permissoes-page{
+
+    padding:20px;
+
+}
+
+
+
+
+/* HEADER */
+
+.card-permissoes-header{
+
+
+    background:white;
+
+    padding:20px;
+
+    border-radius:15px;
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    margin-bottom:20px;
+
+    box-shadow:0 3px 10px rgba(0,0,0,.08);
+
+}
+
+
+
+.card-permissoes-header h2{
+
+    margin:0;
+
+    color:#1d4ed8;
+
+}
+
+
+
+
+.btn-guardar-permissoes{
+
+
+    background:#198754;
+
+    color:white;
+
+    border:none;
+
+    padding:12px 25px;
+
+    border-radius:10px;
+
+    font-weight:bold;
+
+}
+
+
+
+.btn-guardar-permissoes:hover{
+
+
+    background:#146c43;
+
+}
+
+
+
+
+
+/* CARDS */
+
+
+.card-permissoes{
+
+
+    background:white;
+
+    padding:20px;
+
+    border-radius:15px;
+
+    margin-bottom:20px;
+
+    box-shadow:0 3px 10px rgba(0,0,0,.08);
+
+}
+
+
+
+
+
+.card-permissoes label{
+
+
+    font-weight:600;
+
+}
+
+
+
+
+
+#usuario_uuid{
+
+
+    width:350px;
+
+    padding:12px;
+
+    border-radius:10px;
+
+    border:1px solid #ddd;
+
+    margin-top:10px;
+
+}
+
+
+
+
+
+
+
+/* GRID DE PERMISSÕES */
+
+
+.grid-permissoes{
+
+
+    display:grid;
+
+    grid-template-columns:
+    repeat(4,1fr);
+
+    gap:15px;
+
+    margin-top:20px;
+
+}
+
+
+
+
+
+
+
+.permissao-item{
+
+
+    background:#f8f9fa;
+
+    padding:18px;
+
+    border-radius:12px;
+
+    border:1px solid #e5e7eb;
+
+    transition:.2s;
+
+}
+
+
+
+
+
+.permissao-item:hover{
+
+
+    transform:translateY(-3px);
+
+    box-shadow:0 5px 15px rgba(0,0,0,.12);
+
+}
+
+
+
+
+
+.permissao-item input{
+
+
+    width:20px;
+
+    height:20px;
+
+    margin-right:10px;
+
+}
+
+
+
+
+
+.permissao-item span{
+
+
+    text-transform:uppercase;
+
+    font-weight:600;
+
+    color:#374151;
+
+}
+
+
+
+
+
+@media(max-width:1200px){
+
+
+    .grid-permissoes{
+
+        grid-template-columns:
+        repeat(3,1fr);
+
+    }
+
+
+}
+
+
+
+@media(max-width:768px){
+
+
+    .grid-permissoes{
+
+        grid-template-columns:
+        repeat(1,1fr);
+
+    }
+
+
+    .card-permissoes-header{
+
+        flex-direction:column;
+
+        gap:15px;
+
+    }
+
+
+}

@@ -1,95 +1,24 @@
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-    font-family:Poppins,sans-serif;
-}
+/* =========================
+   BODY
+========================= */
 
 body{
-    background:#f4f6f9;
-    overflow:hidden;
-    height:100vh;
-}
 
-/* =========================
-   LAYOUT PRINCIPAL
-========================= */
+    margin:0;
+    padding:0;
 
-.layout{
-    display:flex;
-    height:100vh;
-}
+    font-family:Poppins,sans-serif;
 
-/* =========================
-   SIDEBAR AZUL
-========================= */
+    background:linear-gradient(
+        135deg,
+        #0f172a,
+        #1e3a8a,
+        #2563eb,
+        #60a5fa
+    );
 
-.sidebar{
-    position:fixed;
-    left:0;
-    top:0;
-    width:260px;
-    height:100vh;
+    min-height:100vh;
 
-    background:linear-gradient(180deg,#1e40af,#1d4ed8);
-    color:white;
-
-    padding:25px;
-
-    display:flex;
-    flex-direction:column;
-
-    overflow:hidden;
-
-    z-index:1000;
-}
-
-
-.logo h1{
-    font-size:26px;
-}
-
-.logo span{
-    font-size:12px;
-    opacity:0.7;
-}
-
-
-.menu{
-    flex:1;
-    overflow-y:auto;
-    margin-top:20px;
-}
-
-.menu-item{
-    display:block;
-    padding:14px;
-    margin-top:10px;
-    border-radius:10px;
-    color:white;
-    text-decoration:none;
-    background:rgba(255,255,255,0.1);
-    transition:0.2s;
-}
-
-.menu-item:hover{
-    background:rgba(255,255,255,0.2);
-    transform:translateX(3px);
-}
-
-.tabela-container{
-    height:calc(100vh - 230px);
-    overflow-y:auto;
-    background:white;
-    border-radius:12px;
-    box-shadow:0 2px 10px rgba(0,0,0,.08);
-}
-.cabecalho-pagina{
-    position:sticky;
-    top:0;
-    background:#f4f6f9;
-    z-index:200;
-    padding-bottom:15px;
 }
 
 /* =========================
@@ -97,65 +26,148 @@ body{
 ========================= */
 
 .main{
-    margin-left:260px;
-    width:calc(100% - 260px);
-    height:100vh;
+
+    width:100%;
+
+    min-height:100vh;
+
     display:flex;
+
     flex-direction:column;
-}
 
-.topbar{
-    position:fixed;
-    top:0;
-    left:260px;
-
-    width:calc(100% - 260px);
-    height:80px;
-
-    background:#1e40af;
-
-    padding:20px 30px;
-
-    display:flex;
-    align-items:center;
-
-    box-shadow:0 2px 10px rgba(0,0,0,0.05);
-
-    z-index:900;
-}
-
-.content{
-    margin-top:80px;
-    height:calc(100vh - 80px);
-
-    overflow-y:auto;
-
-    padding:25px;
 }
 
 /* =========================
-   DASHBOARD CARDS
+   MENU SUPERIOR
+========================= */
+
+.topbar{
+
+    position:sticky;
+
+    top:0;
+
+    height:70px;
+
+    width:100%;
+
+    background:rgba(15,23,42,.85);
+
+    backdrop-filter:blur(15px);
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    padding:0 30px;
+
+    box-shadow:0 10px 25px rgba(0,0,0,.20);
+
+    z-index:1000;
+
+}
+
+/* =========================
+   CONTEÚDO
+========================= */
+
+/* ===========================
+   ÁREA DE CONTEÚDO
+=========================== */
+
+
+.content{
+
+    width:100%;
+
+    min-height:calc(100vh - 180px);
+
+    background:white;
+
+    border-radius:20px;
+
+    padding:30px;
+
+    box-shadow:
+
+    0 15px 40px rgba(0,0,0,.20);
+
+}
+
+
+
+/* Melhorar visual das páginas */
+
+.card,
+.tabela-container{
+
+    border-radius:16px;
+
+}
+
+.subtitulo{
+
+    color:rgba(255,255,255,.80);
+
+}
+
+
+
+/* =========================
+   TABELAS
+========================= */
+
+.tabela-container{
+
+    background:white;
+
+    border-radius:18px;
+
+    box-shadow:0 10px 30px rgba(0,0,0,.12);
+
+    overflow:auto;
+
+    padding:15px;
+
+}
+
+/* =========================
+   CARDS
 ========================= */
 
 .cards{
+
     display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+
     gap:20px;
+
 }
 
 .card{
+
     background:white;
-    padding:20px;
-    border-radius:16px;
-    box-shadow:0 3px 12px rgba(0,0,0,0.08);
+
+    border-radius:18px;
+
+    padding:25px;
+
+    box-shadow:0 10px 30px rgba(0,0,0,.10);
+
 }
 
 .card span{
-    font-size:28px;
-    font-weight:bold;
-    color:#1d4ed8;
-}
 
+    font-size:32px;
+
+    font-weight:700;
+
+    color:#2563eb;
+
+}
 /* =========================
    PAINEL
 ========================= */
@@ -525,6 +537,8 @@ table tr:hover{
 
     font-size:16px;
 }
+
+
 .btn-logout {
     color: white;
     margin-top:6px;
@@ -728,4 +742,79 @@ tabelaTickets td{
     padding:12px;
     border-bottom:1px solid #eee;
     background:white;
+}
+
+.utilizadores-grid{
+
+    display:grid;
+
+    grid-template-columns:repeat(3,1fr);
+
+    gap:20px;
+
+}
+
+.campo{
+
+    display:flex;
+
+    flex-direction:column;
+
+}
+
+.campo label{
+
+    margin-bottom:6px;
+
+    font-weight:600;
+
+}
+
+.campo input,
+.campo select{
+
+    width:100%;
+
+}
+
+.checks{
+
+    display:flex;
+
+    gap:20px;
+
+    align-items:center;
+
+    height:42px;
+
+}
+
+.acoes{
+
+    display:grid;
+
+    grid-template-columns:repeat(2,1fr);
+
+    gap:8px;
+
+}
+
+@media(max-width:1200px){
+
+    .utilizadores-grid{
+
+        grid-template-columns:repeat(2,1fr);
+
+    }
+
+}
+
+@media(max-width:768px){
+
+    .utilizadores-grid{
+
+        grid-template-columns:1fr;
+
+    }
+
 }
