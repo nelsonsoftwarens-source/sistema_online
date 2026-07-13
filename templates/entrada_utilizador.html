@@ -5,16 +5,22 @@
 
 <meta charset="UTF-8">
 
-<title>Entrada Utilizador</title>
+<title>Entrada do Utilizador</title>
 
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 
 <style>
 
-body {
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:'Poppins',sans-serif;
+}
 
-    font-family: Arial;
+body{
 
-    background:#1d4ed8;
+    min-height:100vh;
 
     display:flex;
 
@@ -22,208 +28,389 @@ body {
 
     align-items:center;
 
-    height:100vh;
+    overflow:hidden;
 
-    margin:0;
+    position:relative;
 
-}
-
-
-.box {
-
-    background:white;
-
-    padding:30px;
-
-    border-radius:10px;
-
-    width:320px;
+    background:
+    linear-gradient(
+        135deg,
+        #0f172a 0%,
+        #1e3a8a 40%,
+        #2563eb 70%,
+        #38bdf8 100%
+    );
 
 }
 
 
-h2 {
+/* ==========================
+MARCA DE ÁGUA
+========================== */
 
-    text-align:center;
+body::before{
 
-}
+    content:"{{ empresa }}";
 
+    position:absolute;
 
-.empresa {
+    left:50%;
+    top:50%;
 
-    text-align:center;
+    transform:translate(-50%,-50%) rotate(-28deg);
 
-    color:#555;
+    font-size:150px;
 
-    margin-bottom:20px;
+    font-weight:700;
 
-}
+    color:rgba(255,255,255,.05);
 
+    white-space:nowrap;
 
-select,
-input {
-
-    width:100%;
-
-    padding:10px;
-
-    margin:10px 0;
-
-    box-sizing:border-box;
-
-    border:1px solid #ccc;
-
-    border-radius:5px;
+    pointer-events:none;
 
 }
 
 
+/* ==========================
+PAINEL ESQUERDO
+========================== */
 
-button {
+.info{
 
-    width:100%;
+    position:absolute;
 
-    padding:10px;
+    left:60px;
 
-    background:#1d4ed8;
+    top:50%;
+
+    transform:translateY(-50%);
+
+    width:520px;
 
     color:white;
 
-    border:none;
+}
 
-    border-radius:5px;
+.info h1{
 
-    cursor:pointer;
+    font-size:46px;
+
+    margin-bottom:20px;
+
+    line-height:1.2;
+
+}
+
+.info p{
+
+    font-size:18px;
+
+    line-height:1.8;
+
+    color:rgba(255,255,255,.92);
+
+}
+
+.frase{
+
+    margin-top:35px;
+
+    font-size:22px;
+
+    color:#fde68a;
+
+    font-weight:600;
 
 }
 
 
-.mostrar {
+/* ==========================
+LOGIN
+========================== */
+
+.box{
+
+    margin-left:650px;
+
+    width:400px;
+
+    background:rgba(255,255,255,.95);
+
+    backdrop-filter:blur(15px);
+
+    border-radius:18px;
+
+    padding:35px;
+
+    box-shadow:0 25px 60px rgba(0,0,0,.30);
+
+}
+
+h2{
+
+    text-align:center;
+
+    color:#1e3a8a;
+
+    margin-bottom:8px;
+
+    font-size:30px;
+
+}
+
+.empresa{
+
+    text-align:center;
+
+    font-size:16px;
+
+    color:#64748b;
+
+    margin-bottom:25px;
+
+    font-weight:600;
+
+}
+
+select,
+input[type=password],
+input[type=text]{
+
+    width:100%;
+
+    padding:14px;
+
+    margin-top:15px;
+
+    border:1px solid #dbeafe;
+
+    border-radius:10px;
+
+    outline:none;
+
+    font-size:15px;
+
+    transition:.3s;
+
+}
+
+select:focus,
+input:focus{
+
+    border-color:#2563eb;
+
+    box-shadow:0 0 10px rgba(37,99,235,.20);
+
+}
+
+button{
+
+    width:100%;
+
+    margin-top:25px;
+
+    padding:14px;
+
+    border:none;
+
+    border-radius:10px;
+
+    cursor:pointer;
+
+    font-size:16px;
+
+    font-weight:600;
+
+    color:white;
+
+    background:
+    linear-gradient(
+        90deg,
+        #1e40af,
+        #2563eb
+    );
+
+    transition:.3s;
+
+}
+
+button:hover{
+
+    transform:translateY(-2px);
+
+    box-shadow:0 12px 25px rgba(37,99,235,.35);
+
+}
+
+.mostrar{
 
     display:flex;
 
     align-items:center;
 
-    gap:5px;
+    gap:8px;
+
+    margin-top:18px;
+
+    color:#475569;
+
+    font-size:14px;
+
+}
+
+.mostrar input{
+
+    width:auto;
+
+}
+
+.rodape{
+
+    margin-top:25px;
+
+    text-align:center;
+
+    color:#777;
 
     font-size:13px;
 
 }
 
 
-.mostrar input {
+/* ==========================
+RESPONSIVO
+========================== */
 
-    width:auto;
+@media(max-width:1100px){
+
+    .info{
+
+        display:none;
+
+    }
+
+    .box{
+
+        margin-left:0;
+
+        width:92%;
+
+        max-width:400px;
+
+    }
+
+    body::before{
+
+        font-size:110px;
+
+    }
 
 }
 
-
-
 </style>
-
 
 </head>
 
-
 <body>
+
+<div class="info">
+
+    <h1>
+
+        Bem-vindo à empresa<br>
+
+        <strong>{{ empresa }}</strong>
+
+    </h1>
+
+    <p>
+
+        Selecione o utilizador autorizado e introduza a respetiva palavra-passe
+        para continuar. Todas as operações realizadas serão associadas ao
+        utilizador autenticado, garantindo segurança e rastreabilidade.
+
+    </p>
+
+    <div class="frase">
+
+        "Segurança, organização e controlo começam com uma autenticação segura."
+
+    </div>
+
+</div>
 
 
 <div class="box">
 
+    <h2>Entrada do Utilizador</h2>
 
-<h2>
-Login ERP
-</h2>
+    <div class="empresa">
 
+        {{ empresa }}
 
-<div class="empresa">
+    </div>
 
-{{ empresa }}
+    <form id="formLogin">
 
-</div>
+        <select id="utilizador">
 
+            <option value="">
+                Selecione o utilizador
+            </option>
 
+            {% for u in utilizadores %}
 
-<form id="formLogin">
+            <option value="{{u.uuid}}">
 
+                {{u.nome}}
 
-<select id="utilizador">
+            </option>
 
+            {% endfor %}
 
-<option value="">
-Selecione o utilizador
-</option>
+        </select>
 
+        <input
+            type="password"
+            id="senha"
+            placeholder="Palavra-passe"
+        >
 
-{% for u in utilizadores %}
+        <div class="mostrar">
 
-<option value="{{u.uuid}}">
+            <input
+                type="checkbox"
+                id="verSenha"
+            >
 
-{{u.nome}}
+            <label for="verSenha">
 
-</option>
+                Mostrar palavra-passe
 
+            </label>
 
-{% endfor %}
+        </div>
 
+        <button type="submit">
 
-</select>
+            Entrar no Sistema
 
+        </button>
 
+    </form>
 
+    <div class="rodape">
 
-<input
+        NV-Sistema ERP<br>
 
-type="password"
+        Gestão Inteligente para Empresas
 
-id="senha"
-
-placeholder="Senha"
-
->
-
-
-
-
-<div class="mostrar">
-
-
-<input
-
-type="checkbox"
-
-id="verSenha"
-
-
->
-
-<label>
-
-Mostrar senha
-
-</label>
-
+    </div>
 
 </div>
-
-
-
-<button>
-
-Entrar
-
-</button>
-
-
-</form>
-
-
-</div>
-
-
 
 <script>
-
 
 document
 .getElementById("verSenha")
@@ -231,23 +418,17 @@ document
 "change",
 function(){
 
+    let campo =
+    document.getElementById("senha");
 
-let campo =
-document.getElementById("senha");
-
-
-campo.type =
-this.checked
-?
-"text"
-:
-"password";
-
+    campo.type =
+    this.checked
+    ?
+    "text"
+    :
+    "password";
 
 });
-
-
-
 
 
 document
@@ -256,77 +437,55 @@ document
 "submit",
 function(e){
 
+    e.preventDefault();
 
-e.preventDefault();
+    fetch(
+    "/api/login_utilizador",
+    {
 
+        method:"POST",
 
+        headers:{
 
-fetch(
-"/api/login_utilizador",
-{
+            "Content-Type":"application/json"
 
+        },
 
-method:"POST",
+        body:JSON.stringify({
 
+            usuario_uuid:
+            document.getElementById("utilizador").value,
 
-headers:{
+            senha:
+            document.getElementById("senha").value
 
-"Content-Type":
-"application/json"
+        })
 
-},
+    }
 
+    )
 
-body:JSON.stringify({
+    .then(r=>r.json())
 
-    usuario_uuid:
+    .then(d=>{
 
-    document.getElementById("utilizador").value,
+        if(d.sucesso){
 
+            window.location = d.pagina;
 
-    senha:
+        }
 
-    document.getElementById("senha").value
+        else{
 
-})
+            alert(d.mensagem);
 
+        }
 
-
-}
-
-)
-
-.then(r=>r.json())
-
-
-.then(d=>{
-
-
-if(d.sucesso){
-
-
-window.location = d.pagina;
-
-}else{
-
-
-alert(d.mensagem);
-
-
-}
-
-
+    });
 
 });
-
-
-});
-
-
 
 </script>
-
-
 
 </body>
 

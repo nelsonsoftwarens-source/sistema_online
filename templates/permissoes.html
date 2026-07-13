@@ -6,6 +6,7 @@
 
 
     <!-- CABEÇALHO -->
+
     <div class="card-permissoes-header">
 
         <div>
@@ -15,19 +16,24 @@
             </h2>
 
             <small>
-                Controle as janelas disponíveis para cada utilizador
+                Controle janelas e ações disponíveis para cada utilizador
             </small>
 
         </div>
 
 
         <button
-            class="btn-guardar-permissoes"
-            onclick="guardarPermissoes()">
 
-            💾 Guardar Permissões
+            class="btn-guardar-permissoes"
+
+            onclick="guardarPermissoes()"
+
+            data-permissao="permissoes.salvar">
+
+            💾 Salvar
 
         </button>
+
 
     </div>
 
@@ -38,22 +44,31 @@
 
     <div class="card-permissoes">
 
+
         <label>
+
             Selecionar Utilizador
+
         </label>
 
 
         <select
+
             id="usuario_uuid"
+
             onchange="carregarPermissoes()">
 
 
             <option value="">
+
                 Selecione o utilizador
+
             </option>
 
 
+
             {% for u in utilizadores %}
+
 
             <option value="{{u[0]}}">
 
@@ -65,6 +80,7 @@
             {% endfor %}
 
 
+
         </select>
 
 
@@ -74,66 +90,140 @@
 
 
 
-    <!-- LISTA DE PERMISSÕES -->
+    <!-- PERMISSÕES -->
+
 
     <div class="card-permissoes">
 
 
         <h3>
-            📂 Janelas do Sistema
+
+            📂 Permissões do Sistema
+
         </h3>
 
 
 
-        <div class="grid-permissoes">
+
+        <div class="table-responsive">
+
+
+        <table class="table table-hover">
+
+
+            <thead>
+
+
+                <tr>
+
+
+                    <th>
+
+                        Janela
+
+                    </th>
+
+
+                    {% for acao in acoes %}
+
+
+                    <th class="text-center">
+
+                        {{ acao|capitalize }}
+
+                    </th>
+
+
+                    {% endfor %}
+
+
+
+                </tr>
+
+
+            </thead>
+
+
+
+            <tbody>
+
 
 
             {% for j in janelas %}
 
 
-            <div class="permissao-item">
+            <tr>
 
 
-                <label>
+
+                <td>
+
+                    {{j|capitalize}}
+
+                </td>
+
+
+
+                {% for acao in acoes %}
+
+
+                <td class="text-center">
 
 
                     <input
 
+
                         type="checkbox"
+
 
                         class="check-permissao"
 
-                        value="{{j}}"
 
                         data-modulo="{{j}}"
+
+
+                        data-acao="{{acao}}"
+
 
                     >
 
 
-                    <span>
 
-                        {{j|capitalize}}
-
-                    </span>
+                </td>
 
 
-                </label>
+                {% endfor %}
 
 
-            </div>
+
+
+            </tr>
+
 
 
             {% endfor %}
 
 
+
+
+            </tbody>
+
+
+
+        </table>
+
+
         </div>
+
 
 
     </div>
 
 
 
+
 </div>
+
 
 
 
@@ -146,6 +236,7 @@ function carregarPermissoes(){
 
 
     let usuario =
+
     document.getElementById(
         "usuario_uuid"
     ).value;
@@ -166,13 +257,16 @@ function carregarPermissoes(){
 
     .then(r=>r.json())
 
+
     .then(d=>{
 
 
         document
+
         .querySelectorAll(
             ".check-permissao"
         )
+
 
         .forEach(check=>{
 
@@ -182,8 +276,25 @@ function carregarPermissoes(){
 
 
 
-            check.checked =
-            d.includes(modulo);
+            let acao =
+            check.dataset.acao;
+
+
+
+            check.checked = false;
+
+
+
+            if(
+                d[modulo] &&
+                d[modulo][acao]
+            ){
+
+
+                check.checked = true;
+
+
+            }
 
 
 
@@ -194,7 +305,10 @@ function carregarPermissoes(){
     });
 
 
+
 }
+
+
 
 
 
@@ -203,10 +317,13 @@ function carregarPermissoes(){
 function guardarPermissoes(){
 
 
+
     let usuario =
+
     document.getElementById(
         "usuario_uuid"
     ).value;
+
 
 
 
@@ -217,6 +334,7 @@ function guardarPermissoes(){
             "Selecione o utilizador"
         );
 
+
         return;
 
 
@@ -225,21 +343,52 @@ function guardarPermissoes(){
 
 
 
-    let permissoes=[];
+
+    let permissoes = {};
+
+
+
 
 
 
     document
+
     .querySelectorAll(
-        ".check-permissao:checked"
+        ".check-permissao"
     )
 
-    .forEach(c=>{
+
+    .forEach(check=>{
 
 
-        permissoes.push(
-            c.value
-        );
+
+        let modulo =
+        check.dataset.modulo;
+
+
+
+        let acao =
+        check.dataset.acao;
+
+
+
+
+        if(!permissoes[modulo]){
+
+
+            permissoes[modulo]={};
+
+
+        }
+
+
+
+
+        permissoes[modulo][acao] =
+
+            check.checked;
+
+
 
 
     });
@@ -248,8 +397,12 @@ function guardarPermissoes(){
 
 
 
+
+
     fetch(
+
         "/api/salvar_permissoes",
+
         {
 
 
@@ -268,14 +421,18 @@ function guardarPermissoes(){
 
             body:JSON.stringify({
 
+
                 usuario_uuid:usuario,
 
+
                 permissoes:permissoes
+
 
             })
 
 
         }
+
 
     )
 
@@ -290,11 +447,14 @@ function guardarPermissoes(){
 
 
             alert(
-                "Permissões guardadas!"
+                "Permissões guardadas com sucesso!"
             );
 
 
-        }else{
+        }
+
+
+        else{
 
 
             alert(
@@ -305,6 +465,7 @@ function guardarPermissoes(){
         }
 
 
+
     });
 
 
@@ -312,7 +473,9 @@ function guardarPermissoes(){
 }
 
 
+
 </script>
+
 
 
 {% endblock %}

@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="pt">
 
+
+
 <head>
 
     <meta charset="UTF-8">
@@ -36,6 +38,8 @@ body{
     );
 
 }
+
+
 
 /* ===========================
    TOPBAR
@@ -487,6 +491,84 @@ MAIN
     </div>
 
 </div>
+
+<!-- =====================================
+     CONTROLE GLOBAL DE PERMISSÕES
+===================================== -->
+
+<script>
+
+
+let permissoes = {};
+
+
+try {
+
+
+    permissoes = JSON.parse(
+
+        '{{ session.get("permissoes", {}) | tojson | safe }}'
+
+    );
+
+
+}
+
+catch(e){
+
+
+    permissoes = {};
+
+
+}
+
+document
+.querySelectorAll("[data-permissao]")
+.forEach(botao=>{
+
+
+    let regra = botao.dataset.permissao;
+
+
+    let dados = regra.split(".");
+
+
+    let janela = dados[0];
+
+    let acao = dados[1];
+
+
+
+    // ADMINISTRADOR
+
+    if(permissoes === "TODAS"){
+
+        return;
+
+    }
+
+    if(
+
+        !permissoes[janela]
+
+        ||
+
+        permissoes[janela][acao] !== true
+
+    ){
+
+        botao.style.display="none";
+
+    }
+
+
+
+});
+
+
+
+</script>
+
 
 </body>
 

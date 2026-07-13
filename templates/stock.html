@@ -151,8 +151,13 @@ tr:hover{
             {% endfor %}
         </select>
 
-        <button class="btn-transferir" onclick="transferirStock()">
-            🚚 Transferir Stock
+        <button 
+            class="btn-transferir" 
+            onclick="transferirStock()"
+            data-permissao="stock.concluir">
+
+            🚚 Concluir
+
         </button>
 
     </div>

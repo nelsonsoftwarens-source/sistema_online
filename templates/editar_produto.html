@@ -2,8 +2,14 @@
 
 {% block conteudo %}
 
-<div class="topo-pagina">
-    <h2>✏️ Editar Produto</h2>
+<div 
+    class="topo-pagina"
+    data-permissao="produtos.editar">
+
+    <h2>
+        ✏️ Editar
+    </h2>
+
 </div>
 
 <div class="painel">
@@ -18,8 +24,16 @@
         <input type="text" name="categoria" value="{{ produto[4] }}">
         <input type="text" name="barcode" value="{{ produto[5] }}">
 
-        <button class="btn-guardar" type="submit">
+        <button
+
+            class="btn-guardar"
+
+            type="submit"
+
+            data-permissao="produtos.editar">
+
             💾 Atualizar
+
         </button>
 
     </form>

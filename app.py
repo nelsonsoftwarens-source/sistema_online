@@ -5509,7 +5509,13 @@ def carregar_permissoes(usuario_uuid, empresa_id):
         cur.execute("""
             SELECT
 
-                janela
+                janela,
+                ver,
+                salvar,
+                editar,
+                eliminar,
+                concluir,
+                enviar
 
             FROM permissoes
 
@@ -5530,14 +5536,29 @@ def carregar_permissoes(usuario_uuid, empresa_id):
 
 
 
-        permissoes = []
+        permissoes = {}
+
 
 
         for p in dados:
 
-            permissoes.append(
-                p[0]
-            )
+
+            permissoes[p[0]] = {
+
+
+                "ver": bool(p[1]),
+
+                "salvar": bool(p[2]),
+
+                "editar": bool(p[3]),
+
+                "eliminar": bool(p[4]),
+
+                "concluir": bool(p[5]),
+
+                "enviar": bool(p[6])
+
+            }
 
 
 
@@ -5557,9 +5578,8 @@ def carregar_permissoes(usuario_uuid, empresa_id):
             "ERRO AO CARREGAR PERMISSÕES:",
             e
         )
-
-
-        return []
+        return {}
+    
 @app.route("/api/login_utilizador", methods=["POST"])
 def login_utilizador():
 
@@ -5874,7 +5894,7 @@ def login_utilizador():
 
             pagina = "/sem_permissao"
 
-            for p in session["permissoes"]:
+            for p in session["permissoes"].keys():
 
                 if p in mapa:
 
@@ -5945,36 +5965,42 @@ JANELAS_SISTEMA = [
 
 ]
 
+ACOES = [
+
+    "ver",
+    "salvar",
+    "editar",
+    "eliminar",
+    "concluir",
+    "enviar"
+
+]
 @app.route("/permissoes")
 @login_required
 def permissoes():
 
-    empresa_id=session["empresa_id"]
+    empresa_id = session["empresa_id"]
 
 
-    conn=conectar()
+    conn = conectar()
 
-    cur=conn.cursor()
+    cur = conn.cursor()
 
 
     cur.execute("""
         SELECT
             uuid,
             nome
-
         FROM utilizadores
-
         WHERE empresa_id=%s
-
         ORDER BY nome
-
     """,
     (
         empresa_id,
     ))
 
 
-    utilizadores=cur.fetchall()
+    utilizadores = cur.fetchall()
 
 
     cur.close()
@@ -5987,10 +6013,11 @@ def permissoes():
 
         utilizadores=utilizadores,
 
-        janelas=JANELAS_SISTEMA
+        janelas=JANELAS_SISTEMA,
+
+        acoes=ACOES
 
     )
-
 @app.route("/api/permissoes/<usuario_uuid>")
 @login_required
 def buscar_permissoes(usuario_uuid):
@@ -6009,7 +6036,13 @@ def buscar_permissoes(usuario_uuid):
         cur.execute("""
             SELECT
 
-                janela
+                janela,
+                ver,
+                salvar,
+                editar,
+                eliminar,
+                concluir,
+                enviar
 
             FROM permissoes
 
@@ -6031,14 +6064,30 @@ def buscar_permissoes(usuario_uuid):
 
 
 
-        permissoes = []
+        permissoes = {}
+
 
 
         for p in dados:
 
-            permissoes.append(
-                p[0]
-            )
+
+            permissoes[p[0]] = {
+
+
+                "ver": p[1],
+
+                "salvar": p[2],
+
+                "editar": p[3],
+
+                "eliminar": p[4],
+
+                "concluir": p[5],
+
+                "enviar": p[6]
+
+
+            }
 
 
 
@@ -6061,17 +6110,20 @@ def buscar_permissoes(usuario_uuid):
         )
 
 
-        return jsonify([]),500
+        return jsonify({}),500
 
-def tem_permissao(janela):
+def tem_permissao(janela, acao=None):
 
 
     permissoes = session.get(
         "permissoes",
-        []
+        {}
     )
 
+
+    # =============================
     # ADMINISTRADOR
+    # =============================
 
     if permissoes == "TODAS":
 
@@ -6079,7 +6131,38 @@ def tem_permissao(janela):
 
 
 
-    return janela in permissoes
+    # =============================
+    # VERIFICAR JANELA
+    # =============================
+
+    if janela not in permissoes:
+
+        return False
+
+
+
+    # =============================
+    # APENAS ACESSO À JANELA
+    # (compatibilidade com menu)
+    # =============================
+
+    if acao is None:
+
+        return permissoes[janela].get(
+            "ver",
+            False
+        )
+
+
+
+    # =============================
+    # VERIFICAR AÇÃO
+    # =============================
+
+    return permissoes[janela].get(
+        acao,
+        False
+    )
 
 @app.context_processor
 def inject_permissoes():
@@ -6089,7 +6172,6 @@ def inject_permissoes():
         tem_permissao=tem_permissao
 
     )
-
 
 @app.route("/api/salvar_permissoes", methods=["POST"])
 @login_required
@@ -6104,7 +6186,6 @@ def salvar_permissoes():
         empresa_id = session.get("empresa_id")
 
 
-
         usuario_uuid = dados.get(
             "usuario_uuid"
         )
@@ -6112,7 +6193,7 @@ def salvar_permissoes():
 
         permissoes = dados.get(
             "permissoes",
-            []
+            {}
         )
 
 
@@ -6131,7 +6212,6 @@ def salvar_permissoes():
 
 
 
-
         conn = conectar()
 
         cur = conn.cursor()
@@ -6141,7 +6221,6 @@ def salvar_permissoes():
         # =============================
         # APAGAR PERMISSÕES ANTIGAS
         # =============================
-
 
         cur.execute("""
             DELETE FROM permissoes
@@ -6155,18 +6234,17 @@ def salvar_permissoes():
             usuario_uuid,
 
             empresa_id
+
         ))
 
 
 
-
-
         # =============================
-        # INSERIR NOVAS
+        # INSERIR NOVAS PERMISSÕES
         # =============================
 
 
-        for janela in permissoes:
+        for janela, acoes in permissoes.items():
 
 
             cur.execute("""
@@ -6176,7 +6254,13 @@ def salvar_permissoes():
                     empresa_id,
                     usuario_uuid,
                     janela,
-                    permitido
+                    permitido,
+                    ver,
+                    salvar,
+                    editar,
+                    eliminar,
+                    concluir,
+                    enviar
                 )
 
                 VALUES
@@ -6185,22 +6269,63 @@ def salvar_permissoes():
                     %s,
                     %s,
                     %s,
-                    true
+                    true,
+                    %s,
+                    %s,
+                    %s,
+                    %s,
+                    %s,
+                    %s
                 )
 
             """,
             (
+
                 str(uuid.uuid4()),
 
                 empresa_id,
 
                 usuario_uuid,
 
-                janela
+                janela,
+
+
+                acoes.get(
+                    "ver",
+                    False
+                ),
+
+
+                acoes.get(
+                    "salvar",
+                    False
+                ),
+
+
+                acoes.get(
+                    "editar",
+                    False
+                ),
+
+
+                acoes.get(
+                    "eliminar",
+                    False
+                ),
+
+
+                acoes.get(
+                    "concluir",
+                    False
+                ),
+
+
+                acoes.get(
+                    "enviar",
+                    False
+                )
 
             ))
-
-
 
 
 
@@ -6241,7 +6366,6 @@ def salvar_permissoes():
             "mensagem":str(e)
 
         }),500
-
     
 
 from flask import session, request, redirect
