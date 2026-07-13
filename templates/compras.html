@@ -269,12 +269,16 @@ tbody tr:hover{
                     <th>Fornecedor</th>
                     <th>Data</th>
                     <th>Total</th>
+                    <th style="width:120px; text-align:center;">
+                            Ações
+                        </th>
                 </tr>
             </thead>
 
             <tbody id="tabela-compras">
 
                 {% for c in compras %}
+                
 
                 <tr
                     data-fornecedor="{{ c[1]|lower }}"
@@ -284,6 +288,19 @@ tbody tr:hover{
                     <td>{{ c[1] }}</td>
                     <td>{{ c[2] }}</td>
                     <td>{{ c[3] }}</td>
+
+                    <td class="text-center">
+
+                        <button
+                            type="button"
+                            class="btn btn-primary btn-sm"
+                            onclick="event.stopPropagation(); abrirCompra('{{c[0]}}');">
+
+                            Abrir
+
+                        </button>
+
+                    </td>
 
                 </tr>
 

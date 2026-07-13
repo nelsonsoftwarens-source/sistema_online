@@ -1,214 +1,133 @@
 {% extends 'base.html' %}
 
-
 {% block conteudo %}
-
 
 <div class="container-fluid mt-3">
 
+    <div class="card shadow">
 
-<div class="card shadow">
+        <div class="card-header">
 
+            <h3>📦 Fiel de Armazém</h3>
 
-<div class="card-header">
+        </div>
 
+        <div class="card-body">
 
-<h3>
+            <table class="table table-hover" id="tabelaRequisicoes">
 
-📦 Fiel de Armazém
+                <thead>
 
-</h3>
+                    <tr>
 
+                        <th>Número</th>
+
+                        <th>Sector</th>
+
+                        <th>Solicitante</th>
+
+                        <th>Estado</th>
+
+                        <th>Data</th>
+
+                        <th style="width:120px; text-align:center;">
+                            Ações
+                        </th>
+
+                    </tr>
+
+                </thead>
+
+                <tbody>
+
+                    {% for r in requisicoes %}
+
+                    <tr
+                        ondblclick="abrirRequisicao('{{ r[0] }}')"
+                        style="cursor:pointer;"
+                    >
+
+                        <td>{{ r[1] }}</td>
+
+                        <td>{{ r[2] }}</td>
+
+                        <td>{{ r[3] }}</td>
+
+                        <td>
+
+                            {% if r[4] == 'PENDENTE' %}
+
+                                <span class="badge bg-warning">
+                                    Pendente
+                                </span>
+
+                            {% else %}
+
+                                <span class="badge bg-success">
+                                    Concluído
+                                </span>
+
+                            {% endif %}
+
+                        </td>
+
+                        <td>{{ r[5] }}</td>
+
+                        <td class="text-center">
+
+                            <button
+                                type="button"
+                                class="btn btn-primary btn-sm"
+                                onclick="event.stopPropagation(); abrirRequisicao('{{ r[0] }}');">
+
+                                Abrir
+
+                            </button>
+
+                        </td>
+
+                    </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    </div>
 
 </div>
-
-
-
-<div class="card-body">
-
-
-<table class="table table-hover"
-
-id="tabelaRequisicoes">
-
-
-<thead>
-
-
-<tr>
-
-<th>
-Número
-</th>
-
-<th>
-Sector
-</th>
-
-<th>
-Solicitante
-</th>
-
-<th>
-Estado
-</th>
-
-<th>
-Data
-</th>
-
-
-</tr>
-
-
-</thead>
-
-
-
-<tbody>
-
-
-{% for r in requisicoes %}
-
-
-<tr
-
-ondblclick="abrirRequisicao('{{r[0]}}')"
-
-style="cursor:pointer"
-
-
->
-
-
-<td>
-
-{{r[1]}}
-
-</td>
-
-
-<td>
-
-{{r[2]}}
-
-</td>
-
-
-<td>
-
-{{r[3]}}
-
-</td>
-
-
-<td>
-
-
-{% if r[4]=='PENDENTE' %}
-
-
-<span class="badge bg-warning">
-
-Pendente
-
-</span>
-
-
-{% else %}
-
-
-<span class="badge bg-success">
-
-Concluído
-
-</span>
-
-
-{% endif %}
-
-
-</td>
-
-
-<td>
-
-{{r[5]}}
-
-</td>
-
-
-</tr>
-
-
-{% endfor %}
-
-
-
-</tbody>
-
-
-
-</table>
-
-
-</div>
-
-
-</div>
-
-
-</div>
-
-
-
 
 <script>
 
-
 function abrirRequisicao(uuid){
 
-
-window.location.href =
-"/fiel_armazem/"+uuid;
-
+    window.location.href = "/fiel_armazem/" + uuid;
 
 }
 
 
 function calcularQuantidade(campo){
 
-
     let id = campo.dataset.id;
 
-
-    let pedida = parseFloat(
-        campo.dataset.pedida
-    ) || 0;
-
-
+    let pedida = parseFloat(campo.dataset.pedida) || 0;
 
     let entregue = document.querySelector(
-        '.entregue[data-id="'+id+'"]'
+        '.entregue[data-id="' + id + '"]'
     );
-
 
     let recusado = document.querySelector(
-        '.recusado[data-id="'+id+'"]'
+        '.recusado[data-id="' + id + '"]'
     );
 
+    let valor = parseFloat(campo.value) || 0;
 
 
-    let valor = parseFloat(
-        campo.value
-    ) || 0;
-
-
-
-
-    // Alterou entregue
+    // Alterou quantidade entregue
     if(campo.classList.contains("entregue")){
-
 
         if(valor > pedida){
 
@@ -217,24 +136,15 @@ function calcularQuantidade(campo){
             campo.value = pedida;
 
         }
-
 
         entregue.value = valor;
 
-
-        recusado.value =
-        pedida - valor;
-
-
+        recusado.value = pedida - valor;
 
     }
 
-
-
-    // Alterou recusado
-    else {
-
-
+    // Alterou quantidade recusada
+    else{
 
         if(valor > pedida){
 
@@ -244,22 +154,14 @@ function calcularQuantidade(campo){
 
         }
 
-
         recusado.value = valor;
 
-
-        entregue.value =
-        pedida - valor;
-
-
+        entregue.value = pedida - valor;
 
     }
-
-
 
 }
 
 </script>
-
 
 {% endblock %}
