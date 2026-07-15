@@ -6566,6 +6566,7 @@ def proteger_rotas():
         "api_compras",
         "salvar_compra",
         "requisicoes",
+        "sincronizar_requisicoes",
     ]
     print("PATH:", request.path)
     print("ENDPOINT:", repr(request.endpoint))
