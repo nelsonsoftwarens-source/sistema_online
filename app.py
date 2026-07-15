@@ -9,6 +9,24 @@ app.secret_key = "nvsistema2025"
 from functools import wraps
 from flask import session, redirect
 
+ORDEM_JANELAS = [
+    "painel",
+    "produtos",
+    "vendas",
+    "tickets",
+    "relatorios",
+    "stock",
+    "vendas_online",
+    "compras",
+    "fornecedores",
+    "requisicoes",
+    "sectores",
+    "fiel_armazem",
+    "utilizadores",
+    "permissoes"
+]
+
+
    
 @app.context_processor
 def inject_utilizador():
@@ -5894,13 +5912,16 @@ def login_utilizador():
 
             pagina = "/sem_permissao"
 
-            for p in session["permissoes"].keys():
 
-                if p in mapa:
+            for janela in JANELAS_SISTEMA:
 
-                    pagina = mapa[p]
+                if janela in session["permissoes"]:
 
-                    break
+                    if session["permissoes"][janela].get("ver", False):
+
+                        pagina = mapa[janela]
+
+                        break
 
         return jsonify({
 
