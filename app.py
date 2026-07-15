@@ -6388,6 +6388,146 @@ def salvar_permissoes():
 
         }),500
     
+@app.route("/api/sincronizar_requisicoes", methods=["POST"])
+def sincronizar_requisicoes():
+
+    try:
+
+        dados = request.json
+
+
+        empresa_id = dados.get("empresa_id")
+        token = dados.get("token")
+
+
+        if not empresa_id or not token:
+            return jsonify({
+                "sucesso":False,
+                "mensagem":"Dados inválidos"
+            }),401
+
+
+
+        conn = conectar()
+
+        cur = conn.cursor()
+
+
+
+        # validar empresa/token
+
+        cur.execute("""
+            SELECT id
+            FROM empresas
+            WHERE id=%s
+            AND token=%s
+        """,
+        (
+            empresa_id,
+            token
+        ))
+
+
+        empresa = cur.fetchone()
+
+
+        if not empresa:
+
+            return jsonify({
+                "sucesso":False,
+                "mensagem":"Token inválido"
+            }),401
+
+
+
+        # buscar requisições novas
+
+
+        cur.execute("""
+            SELECT *
+            FROM requisicoes
+            WHERE empresa_id=%s
+            AND sincronizado_pdv=false
+        """,
+        (
+            empresa_id,
+        ))
+
+
+        requisicoes = cur.fetchall()
+
+
+
+        resultado=[]
+
+
+        for r in requisicoes:
+
+
+            cur.execute("""
+                SELECT *
+                FROM requisicao_itens
+                WHERE requisicao_uuid=%s
+            """,
+            (
+                r[1],
+            ))
+
+
+            itens = cur.fetchall()
+
+
+
+            cur.execute("""
+                SELECT *
+                FROM requisicao_historico
+                WHERE requisicao_uuid=%s
+            """,
+            (
+                r[1],
+            ))
+
+
+            historico = cur.fetchall()
+
+
+
+            resultado.append({
+
+                "requisicao":r,
+
+                "itens":itens,
+
+                "historico":historico
+
+            })
+
+
+
+        cur.close()
+        conn.close()
+
+
+
+        return jsonify({
+
+            "sucesso":True,
+
+            "dados":resultado
+
+        })
+
+
+    except Exception as e:
+
+        return jsonify({
+
+            "sucesso":False,
+
+            "erro":str(e)
+
+        }),500
+
 
 from flask import session, request, redirect
 @app.before_request
