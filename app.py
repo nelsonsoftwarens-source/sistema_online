@@ -6573,6 +6573,9 @@ def proteger_rotas():
     print("ESTÁ NA LISTA?", request.endpoint in rotas_livres)
     print("LOGIN_ID:", session.get("login_id"))
 
+    if request.path.startswith("/api/"):
+        return
+
     if request.endpoint in rotas_livres:
         return
 
