@@ -6396,14 +6396,17 @@ def sincronizar_requisicoes():
         dados = request.json
 
 
-        empresa_id = dados.get("empresa_id")
         token = dados.get("token")
 
 
-        if not empresa_id or not token:
+        if not token:
+
             return jsonify({
-                "sucesso":False,
-                "mensagem":"Dados inválidos"
+
+                "sucesso": False,
+
+                "mensagem": "Token não informado"
+
             }),401
 
 
@@ -6414,40 +6417,54 @@ def sincronizar_requisicoes():
 
 
 
-        # validar empresa/token
+        # ======================================
+        # DESCOBRIR EMPRESA PELO TOKEN
+        # ======================================
 
         cur.execute("""
             SELECT id
             FROM empresas
-            WHERE id=%s
-            AND token=%s
+            WHERE token=%s
+            LIMIT 1
         """,
         (
-            empresa_id,
-            token
+            token,
         ))
 
 
         empresa = cur.fetchone()
 
 
+
         if not empresa:
 
+            cur.close()
+            conn.close()
+
             return jsonify({
+
                 "sucesso":False,
+
                 "mensagem":"Token inválido"
+
             }),401
 
 
 
-        # buscar requisições novas
+        empresa_id = empresa[0]
 
+
+
+        # ======================================
+        # BUSCAR REQUISIÇÕES NÃO SINCRONIZADAS
+        # ======================================
 
         cur.execute("""
             SELECT *
             FROM requisicoes
             WHERE empresa_id=%s
             AND sincronizado_pdv=false
+            ORDER BY data
         """,
         (
             empresa_id,
@@ -6461,8 +6478,13 @@ def sincronizar_requisicoes():
         resultado=[]
 
 
+
         for r in requisicoes:
 
+
+            # ==============================
+            # ITENS
+            # ==============================
 
             cur.execute("""
                 SELECT *
@@ -6477,6 +6499,10 @@ def sincronizar_requisicoes():
             itens = cur.fetchall()
 
 
+
+            # ==============================
+            # HISTÓRICO
+            # ==============================
 
             cur.execute("""
                 SELECT *
@@ -6494,17 +6520,18 @@ def sincronizar_requisicoes():
 
             resultado.append({
 
-                "requisicao":r,
+                "requisicao": r,
 
-                "itens":itens,
+                "itens": itens,
 
-                "historico":historico
+                "historico": historico
 
             })
 
 
 
         cur.close()
+
         conn.close()
 
 
@@ -6513,12 +6540,22 @@ def sincronizar_requisicoes():
 
             "sucesso":True,
 
+            "empresa_id":empresa_id,
+
             "dados":resultado
 
         })
 
 
+
     except Exception as e:
+
+
+        print(
+            "ERRO SINCRONIZAR REQUISIÇÕES:",
+            e
+        )
+
 
         return jsonify({
 
@@ -6527,7 +6564,6 @@ def sincronizar_requisicoes():
             "erro":str(e)
 
         }),500
-
 
 from flask import session, request, redirect
 @app.before_request
