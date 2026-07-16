@@ -6431,7 +6431,7 @@ def sincronizar_requisicoes():
 
         cur.execute("""
             SELECT id
-            FROM login_empresa
+            FROM logins_empresa
             WHERE token=%s
             LIMIT 1
         """,
