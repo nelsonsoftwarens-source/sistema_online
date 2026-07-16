@@ -26,7 +26,15 @@ ORDEM_JANELAS = [
     "permissoes"
 ]
 
+def row_to_dict(cursor, row):
 
+    return {
+
+        desc[0]: valor
+
+        for desc, valor in zip(cursor.description, row)
+
+    }
    
 @app.context_processor
 def inject_utilizador():
@@ -6470,8 +6478,13 @@ def sincronizar_requisicoes():
             empresa_id,
         ))
 
+        requisicoes = [
 
-        requisicoes = cur.fetchall()
+            row_to_dict(cur, r)
+
+            for r in cur.fetchall()
+
+        ]
 
 
 
@@ -6492,11 +6505,16 @@ def sincronizar_requisicoes():
                 WHERE requisicao_uuid=%s
             """,
             (
-                r[1],
+                r["uuid"],
             ))
 
+            itens = [
 
-            itens = cur.fetchall()
+                row_to_dict(cur, i)
+
+                for i in cur.fetchall()
+
+            ]
 
 
 
@@ -6510,11 +6528,16 @@ def sincronizar_requisicoes():
                 WHERE requisicao_uuid=%s
             """,
             (
-                r[1],
+                r["uuid"],
             ))
 
+            historico = [
 
-            historico = cur.fetchall()
+                row_to_dict(cur, h)
+
+                for h in cur.fetchall()
+
+            ]
 
 
 
