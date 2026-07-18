@@ -1,0 +1,22 @@
+# Node
+**/node_modules/
+
+# Logs
+**/logs/
+*.log
+
+# WhatsApp Sessions
+**/sessions/
+
+# Python
+__pycache__/
+*.pyc
+
+# Ambiente
+.env
+
+# Editor
+.vscode/
+
+# Windows
+Thumbs.db

@@ -3706,196 +3706,118 @@ def buscar_produtos():
     conn.close()
 
     return jsonify(produtos)
+
 @app.route("/requisicoes")
+@login_required
 def requisicoes():
 
     empresa_id = session.get("empresa_id")
 
-
     if not empresa_id:
-
         return "Empresa não encontrada", 401
 
-
-
     conn = conectar()
-
     cur = conn.cursor()
 
-
-
-    # ==============================
-    # UTILIZADORES
-    # ==============================
+    # ==========================================
+    # FIEIS DE ARMAZÉM
+    # ==========================================
 
     cur.execute(
         """
-
         SELECT
-
             uuid,
-
             nome
-
-
         FROM utilizadores
-
-
         WHERE empresa_id=%s
-
-
+          AND UPPER(COALESCE(cargo,'')) LIKE '%%FIEL%%'
         ORDER BY nome
-
-
         """,
-
-        (
-            empresa_id,
-        )
-
+        (empresa_id,)
     )
 
+    fieis = []
 
-    utilizadores = []
+    for row in cur.fetchall():
 
+        print("UTILIZADOR:", row)
 
-    for u in cur.fetchall():
+        if len(row) >= 2:
 
-        utilizadores.append({
+            fieis.append({
+                "uuid": str(row[0]),
+                "nome": row[1]
+            })
 
-            "uuid": u[0],
+    print("FIEIS:", fieis)
 
-            "nome": u[1]
-
-        })
-
-
-
-
-
-    # ==============================
+    # ==========================================
     # SECTORES
-    # ==============================
-
+    # ==========================================
 
     cur.execute(
         """
-
         SELECT
-
             uuid,
-
             nome
-
-
         FROM sectores
-
-
         WHERE empresa_id=%s
-
-
-        AND activo=true
-
-
         ORDER BY nome
-
-
         """,
-
-        (
-            empresa_id,
-        )
-
+        (empresa_id,)
     )
 
+    sectores = [
+        {
+            "uuid": str(r[0]),
+            "nome": r[1]
+        }
+        for r in cur.fetchall()
+    ]
 
-    sectores = []
-
-
-    for s in cur.fetchall():
-
-        sectores.append({
-
-            "uuid": s[0],
-
-            "nome": s[1]
-
-        })
-
-
-
-
-
-    # ==============================
+    # ==========================================
     # PRODUTOS
-    # ==============================
+    # ==========================================
 
-
-    cur.execute("""
-
+    cur.execute(
+        """
         SELECT
-
             id,
-
             descricao,
-
             preco_venda,
-
             categoria
-
-
         FROM produtos
-
-
         WHERE empresa_id=%s
-
-
-        AND ativo=true
-
-
+          AND ativo=true
         ORDER BY descricao
-
-
-    """,
-    (
-        empresa_id,
-    ))
-
-
+        """,
+        (empresa_id,)
+    )
 
     produtos = cur.fetchall()
 
-
-
-
-
-
     cur.close()
-
     conn.close()
 
-
-
     return render_template(
-
         "requisicoes.html",
-
-        utilizadores=utilizadores,
-
+        fieis=fieis,
         sectores=sectores,
-
         produtos=produtos
-
     )
-
+    
 from flask import request, jsonify, session
 from datetime import datetime
 import uuid
+from whatsapp_service.servico import enviar_notificacao
 
 @app.route("/api/enviar_requisicao", methods=["POST"])
 @login_required
 @utilizador_required
 def enviar_requisicao():
+
+    conn = None
+    cur = None
 
     try:
 
@@ -3904,15 +3826,15 @@ def enviar_requisicao():
         empresa_id = session.get("empresa_id")
         usuario = session.get("nome") or session.get("usuario") or "Sistema"
 
+
         if not empresa_id:
 
             return jsonify({
+                "sucesso":False,
+                "mensagem":"Empresa não encontrada"
+            }),401
 
-                "sucesso": False,
 
-                "mensagem": "Empresa não encontrada"
-
-            }), 401
 
         # ==========================
         # DADOS RECEBIDOS
@@ -3920,18 +3842,31 @@ def enviar_requisicao():
 
         destino_uuid = dados.get("destino")
 
-        responsavel = (
-            dados.get("responsavel", "")
+        fiel_uuid = dados.get("fiel_uuid")
+
+        fiel_nome = (
+            dados.get("fiel_nome","")
             .strip()
             .upper()
         )
 
+
+        responsavel = (
+            dados.get("responsavel","")
+            .strip()
+            .upper()
+        )
+
+
         observacao = (
-            dados.get("observacao", "")
+            dados.get("observacao","")
             .strip()
         )
 
-        itens = dados.get("itens", [])
+
+        itens = dados.get("itens",[])
+
+
 
         # ==========================
         # VALIDAÇÕES
@@ -3940,38 +3875,44 @@ def enviar_requisicao():
         if not destino_uuid:
 
             return jsonify({
-
-                "sucesso": False,
-
-                "mensagem": "Selecione o sector."
-
+                "sucesso":False,
+                "mensagem":"Selecione o sector."
             })
+
+
+        if not fiel_uuid:
+
+            return jsonify({
+                "sucesso":False,
+                "mensagem":"Selecione o Fiel de Armazém."
+            })
+
 
         if not responsavel:
 
             return jsonify({
-
-                "sucesso": False,
-
-                "mensagem": "Informe o responsável do sector."
-
+                "sucesso":False,
+                "mensagem":"Informe o responsável do sector."
             })
+
 
         if not itens:
 
             return jsonify({
-
-                "sucesso": False,
-
-                "mensagem": "Nenhum produto selecionado."
-
+                "sucesso":False,
+                "mensagem":"Nenhum produto selecionado."
             })
 
+
+
         conn = conectar()
+
         cur = conn.cursor()
 
+
+
         # ==========================
-        # BUSCAR NOME DO SECTOR
+        # BUSCAR SECTOR
         # ==========================
 
         cur.execute("""
@@ -3984,83 +3925,108 @@ def enviar_requisicao():
 
             AND empresa_id=%s
 
-        """, (
-
+        """,
+        (
             destino_uuid,
-
             empresa_id
-
         ))
+
 
         setor = cur.fetchone()
 
+
+
         if not setor:
 
-            cur.close()
-            conn.close()
+            raise Exception(
+                "Sector não encontrado."
+            )
 
-            return jsonify({
-
-                "sucesso": False,
-
-                "mensagem": "Sector não encontrado."
-
-            })
 
         nome_setor = setor[0]
 
+
+
         # ==========================
-        # GERAR DADOS
+        # VALIDAR FIEL
         # ==========================
 
-        requisicao_uuid = str(uuid.uuid4())
+        cur.execute("""
+            SELECT
+                nome,
+                telefone
+            FROM utilizadores
+            WHERE uuid=%s
+            AND empresa_id=%s
+            AND activo=true
+        """,
+        (
+            fiel_uuid,
+            empresa_id
+        ))
 
-        numero = "REQ-" + datetime.now().strftime("%Y%m%d%H%M%S")
+        fiel = cur.fetchone()
+
+        if not fiel:
+            raise Exception("Fiel de armazém inválido.")
+
+        fiel_nome = fiel[0]
+        telefone = (fiel[1] or "").strip()
+
+
+        # ==========================
+        # GERAR REQUISIÇÃO
+        # ==========================
+
+        requisicao_uuid = str(
+            uuid.uuid4()
+        )
+
+
+        numero = (
+            "REQ-" +
+            datetime.now().strftime(
+                "%Y%m%d%H%M%S"
+            )
+        )
+
+
 
         # ==========================
         # CABEÇALHO
         # ==========================
 
+
         cur.execute("""
 
             INSERT INTO requisicoes
             (
-
                 uuid,
-
                 empresa_id,
-
                 numero,
-
                 sector,
-
                 utilizador,
-
                 utilizador_uuid,
-
                 origem,
-
                 destino,
-
                 observacao,
-
                 estado,
-
                 data,
-
-                criado_por
-
+                criado_por,
+                fiel_uuid,
+                fiel_nome
             )
+
 
             VALUES
-
             (
-
-                %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,NOW(),%s
-
+                %s,%s,%s,%s,%s,%s,%s,%s,%s,
+                %s,NOW(),%s,%s,%s
             )
 
-        """, (
+
+        """,
+        (
             requisicao_uuid,
 
             empresa_id,
@@ -4069,11 +4035,11 @@ def enviar_requisicao():
 
             nome_setor,
 
-            responsavel,      # <-- utilizador passa a ser o responsável
+            responsavel,
 
             None,
 
-            "Armazém Geral",  # ou outra origem que pretendas manter
+            "Armazém Geral",
 
             nome_setor,
 
@@ -4081,9 +4047,15 @@ def enviar_requisicao():
 
             "PENDENTE",
 
-            usuario           # quem criou a requisição
+            usuario,
+
+            fiel_uuid,
+
+            fiel_nome
 
         ))
+
+
 
         # ==========================
         # ITENS
@@ -4091,19 +4063,24 @@ def enviar_requisicao():
 
         for item in itens:
 
+
             produto_id = item.get("id")
 
-            quantidade = float(item.get("qtd", 0))
+            quantidade = float(
+                item.get("qtd",0)
+            )
+
 
             if quantidade <= 0:
                 continue
+
+
 
             cur.execute("""
 
                 SELECT
 
                     uuid,
-
                     descricao
 
                 FROM produtos
@@ -4112,68 +4089,59 @@ def enviar_requisicao():
 
                 AND empresa_id=%s
 
-            """, (
-
+            """,
+            (
                 produto_id,
-
                 empresa_id
-
             ))
 
+
+
             produto = cur.fetchone()
+
+
 
             if not produto:
                 continue
 
-            produto_uuid = produto[0]
 
-            nome_produto = produto[1]
 
-            item_uuid = str(uuid.uuid4())
+            item_uuid = str(
+                uuid.uuid4()
+            )
+
+
 
             cur.execute("""
 
                 INSERT INTO requisicao_itens
-
                 (
-
                     uuid,
-
                     requisicao_uuid,
-
                     produto_uuid,
-
                     produto,
-
                     quantidade_pedida,
-
                     quantidade_entregue,
-
                     quantidade_recusada,
-
                     empresa_id,
-
                     estado
-
                 )
 
                 VALUES
-
                 (
-
                     %s,%s,%s,%s,%s,%s,%s,%s,%s
-
                 )
 
-            """, (
+            """,
+            (
 
                 item_uuid,
 
                 requisicao_uuid,
 
-                produto_uuid,
+                produto[0],
 
-                nome_produto,
+                produto[1],
 
                 quantidade,
 
@@ -4187,6 +4155,8 @@ def enviar_requisicao():
 
             ))
 
+
+
         # ==========================
         # HISTÓRICO
         # ==========================
@@ -4194,43 +4164,27 @@ def enviar_requisicao():
         cur.execute("""
 
             INSERT INTO requisicao_historico
-
             (
-
                 requisicao_uuid,
-
                 data,
-
                 utilizador,
-
                 empresa_id,
-
                 acao,
-
                 observacao
-
             )
 
             VALUES
-
             (
-
                 %s,
-
                 NOW(),
-
                 %s,
-
                 %s,
-
                 %s,
-
                 %s
-
             )
 
-        """, (
-
+        """,
+        (
             requisicao_uuid,
 
             usuario,
@@ -4239,48 +4193,124 @@ def enviar_requisicao():
 
             "REQUISIÇÃO CRIADA",
 
-            "Aguardando atendimento"
+            f"Enviada para o Fiel: {fiel_nome}"
 
         ))
 
+
+
         conn.commit()
+        # ==========================================
+        # ENVIAR NOTIFICAÇÃO WHATSAPP
+        # ==========================================
 
-        cur.close()
+        if telefone:
 
-        conn.close()
+            link = (
+                f"https://sistema-online-icnn.onrender.com/"
+                f"requisicoes?uuid={requisicao_uuid}"
+            )
+
+            mensagem = f"""📦 *NOVA REQUISIÇÃO*
+
+        Olá *{fiel_nome}*.
+
+        Existe uma nova requisição pendente de atendimento.
+
+        ━━━━━━━━━━━━━━━━━━
+
+        📄 Número:
+        {numero}
+
+        👤 Solicitante:
+        {responsavel}
+
+        🏢 Sector:
+        {nome_setor}
+
+        📦 Total de Itens:
+        {len(itens)}
+
+        ━━━━━━━━━━━━━━━━━━
+
+        🔗 Abrir requisição:
+
+        {link}
+
+        Obrigado.
+        NV Sistema
+        """
+
+            try:
+
+                resposta = enviar_notificacao(
+
+                    empresa_id,
+
+                    telefone,
+
+                    mensagem
+
+                )
+
+                print("WHATSAPP:", resposta)
+
+            except Exception as erro:
+
+                print("ERRO AO ENVIAR WHATSAPP:", erro)
+
 
         return jsonify({
 
-            "sucesso": True,
+            "sucesso":True,
 
-            "numero": numero,
+            "numero":numero,
 
-            "mensagem": "Requisição criada com sucesso."
+            "mensagem":
+            "Requisição criada com sucesso."
 
         })
 
+
+
     except Exception as e:
 
-        try:
+
+        if conn:
+
             conn.rollback()
-        except:
-            pass
 
-        try:
-            cur.close()
-            conn.close()
-        except:
-            pass
 
-        print("ERRO REQUISIÇÃO:", e)
+        print(
+            "ERRO REQUISIÇÃO:",
+            e
+        )
+
 
         return jsonify({
 
-            "sucesso": False,
+            "sucesso":False,
 
-            "mensagem": str(e)
+            "mensagem":str(e)
 
-        }), 500
+        }),500
+
+
+
+    finally:
+
+
+        try:
+
+            if cur:
+                cur.close()
+
+            if conn:
+                conn.close()
+
+        except:
+
+            pass
 
 @app.route("/sectores")
 @login_required
@@ -6587,6 +6617,91 @@ def sincronizar_requisicoes():
             "erro":str(e)
 
         }),500
+
+@app.route("/configuracao_whatsapp")
+@login_required
+def configuracao_whatsapp():
+
+    empresa_id = session.get("empresa_id")
+
+    if not empresa_id:
+        return "Empresa não encontrada",401
+
+
+    con = conectar()
+    cur = con.cursor()
+
+
+    cur.execute("""
+        SELECT
+
+            provider,
+            instance_id,
+            token,
+            numero,
+            estado
+
+        FROM whatsapp_config
+
+        WHERE empresa_id=%s
+
+    """,
+    (
+        empresa_id,
+    ))
+
+
+    dados = cur.fetchone()
+
+
+    cur.close()
+    con.close()
+
+
+    whatsapp = {
+
+        "provider":"ULTRAMSG",
+        "instance_id":"",
+        "token":"",
+        "numero":"",
+        "estado":"DESCONECTADO"
+
+    }
+
+
+    if dados:
+
+        whatsapp = {
+
+            "provider":dados[0],
+            "instance_id":dados[1],
+            "token":dados[2],
+            "numero":dados[3],
+            "estado":dados[4]
+
+        }
+
+
+    return render_template(
+
+        "configuracao_whatsapp.html",
+
+        whatsapp=whatsapp
+
+    )
+
+@app.route("/whatsapp")
+@login_required
+def whatsapp():
+    empresa_id = session.get(
+        "empresa_id"
+    )
+    if not empresa_id:
+        return "Empresa não encontrada",401
+    return render_template(
+        "whatsapp.html",
+        empresa_id=empresa_id
+    )
 
 from flask import session, request, redirect
 @app.before_request

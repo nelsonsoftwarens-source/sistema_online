@@ -1,0 +1,105 @@
+{% extends 'base.html' %}
+
+{% block conteudo %}
+
+
+<div class="container mt-4">
+
+
+    <div class="card shadow">
+
+        <div class="card-header">
+
+            <h3>
+                📱 Configuração WhatsApp
+            </h3>
+
+        </div>
+
+
+        <div class="card-body text-center">
+
+
+            <input 
+            type="hidden"
+            id="empresa_id"
+            value="{{empresa_id}}">
+
+
+            <div id="estado"
+                 class="mb-3">
+
+                🔴 Desligado
+
+            </div>
+
+
+
+            <div>
+
+                <img 
+                id="qr"
+                style="
+                width:280px;
+                display:none;
+                border:1px solid #ddd;
+                padding:10px;
+                "
+                >
+
+            </div>
+
+
+
+            <br>
+
+
+
+            <button
+
+            class="btn btn-success"
+
+            onclick="conectarWhatsApp()">
+
+                📲 Conectar WhatsApp
+
+            </button>
+
+
+
+            <button
+
+            class="btn btn-danger"
+
+            onclick="desconectarWhatsApp()">
+
+                ❌ Desconectar
+
+            </button>
+
+
+
+            <hr>
+
+
+            <div id="telefone">
+
+            </div>
+
+
+        </div>
+
+
+    </div>
+
+
+</div>
+
+
+<script src="{{url_for(
+'static',
+filename='js/whatsapp.js'
+)}}"></script>
+
+
+{% endblock %}

@@ -292,8 +292,6 @@ function(){
 // =====================================
 // GUARDAR REQUISIÇÃO
 // =====================================
-
-
 function guardarRequisicao(){
 
 
@@ -313,6 +311,24 @@ function guardarRequisicao(){
     document.getElementById(
         "destino"
     ).value;
+
+
+
+    let fiel =
+    document.getElementById(
+        "fiel_armazem"
+    ).value;
+
+
+
+    let fiel_nome =
+    document.getElementById(
+        "fiel_armazem"
+    ).options[
+        document.getElementById(
+            "fiel_armazem"
+        ).selectedIndex
+    ].text;
 
 
 
@@ -344,6 +360,22 @@ function guardarRequisicao(){
 
 
 
+    if(!fiel){
+
+        alert(
+            "Selecione o Fiel de Armazém"
+        );
+
+        document.getElementById(
+            "fiel_armazem"
+        ).focus();
+
+        return;
+
+    }
+
+
+
     if(!responsavel){
 
         alert(
@@ -362,13 +394,24 @@ function guardarRequisicao(){
 
     let dados = {
 
+
         destino: destino,
+
+
+        fiel_uuid: fiel,
+
+
+        fiel_nome: fiel_nome,
+
 
         responsavel: responsavel,
 
+
         observacao: observacao,
 
+
         itens: itens
+
 
     };
 
@@ -394,48 +437,76 @@ function guardarRequisicao(){
 
     )
 
+
     .then(
         response => response.json()
     )
 
+
     .then(
         resultado => {
 
+
             if(resultado.sucesso){
 
+
                 alert(
-                    "Requisição enviada com sucesso!"
+                    "📦 Requisição enviada com sucesso!"
                 );
+
 
                 itens = [];
 
-                document.getElementById("responsavel").value = "";
 
-                document.getElementById("observacao").value = "";
+                document.getElementById(
+                    "responsavel"
+                ).value = "";
+
+
+                document.getElementById(
+                    "observacao"
+                ).value = "";
+
+
+                document.getElementById(
+                    "fiel_armazem"
+                ).selectedIndex = 0;
+
 
                 renderItens();
 
+
+
             }else{
+
 
                 alert(
                     resultado.mensagem ||
                     "Erro ao guardar"
                 );
 
+
             }
+
 
         }
 
     )
 
+
     .catch(
         erro => {
 
-            console.error(erro);
+
+            console.error(
+                erro
+            );
+
 
             alert(
                 "Erro de comunicação"
             );
+
 
         }
 

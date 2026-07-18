@@ -2,9 +2,7 @@
 
 {% block conteudo %}
 
-
 <div class="vendas-layout">
-
 
 <!-- =============================
      REQUISIÇÃO ATUAL
@@ -12,29 +10,37 @@
 
 <div class="carrinho">
 
-
-<h2>
-📦 Requisição
-</h2>
-
+<h2>📦 Requisição</h2>
 
 <div class="dados-requisicao">
 
     <!-- Sector -->
-    <label>
-        Sector
-    </label>
+    <label>Sector</label>
 
     <select id="destino">
-
         {% for s in sectores %}
-
         <option value="{{s.uuid}}">
             {{s.nome}}
         </option>
-
         {% endfor %}
+    </select>
 
+
+    <!-- Fiel de Armazém -->
+    <label class="mt-2">
+        Fiel de Armazém
+    </label>
+
+    <select id="fiel_armazem">
+        <option value="">
+            Selecione...
+        </option>
+
+        {% for u in fieis %}
+        <option value="{{u.uuid}}">
+            {{u.nome}}
+        </option>
+        {% endfor %}
     </select>
 
 
@@ -50,7 +56,7 @@
         placeholder="Nome do responsável"
         autocomplete="off"
         style="text-transform: uppercase;"
-        oninput="this.value = this.value.toUpperCase();"
+        oninput="this.value=this.value.toUpperCase();"
     >
 
 
@@ -61,8 +67,8 @@
 
     <textarea
         id="observacao"
-        placeholder="Observação..."
-        rows="3">
+        rows="3"
+        placeholder="Observação...">
     </textarea>
 
 </div>
@@ -72,40 +78,30 @@
 <thead>
 
 <tr>
-
-<th>
-Produto
-</th>
-
-<th>
-Qtd
-</th>
-
-<th>
-Ação
-</th>
-
+<th>Produto</th>
+<th>Qtd</th>
+<th>Ação</th>
 </tr>
-</thead>
-<tbody>
 
-</tbody>
+</thead>
+
+<tbody></tbody>
 
 </table>
+
 <h1 id="total-geral">
 0 itens
 </h1>
+
 <button
-
     class="btn-finalizar"
-
     onclick="guardarRequisicao()"
-
     data-permissao="requisicoes.enviar">
 
     📤 Enviar
 
 </button>
+
 </div>
 
 <!-- =============================
@@ -113,49 +109,42 @@ Ação
 ============================= -->
 
 <div class="produtos">
+
 <div class="header-produtos">
-<h2>
-📦 Produtos
-</h2>
+
+<h2>📦 Produtos</h2>
+
 <input
-type="text"
-id="filtro-produtos"
-class="campo-busca-inline"
-placeholder="🔎 Filtrar produtos..."
+    type="text"
+    id="filtro-produtos"
+    class="campo-busca-inline"
+    placeholder="🔎 Filtrar produtos..."
 >
+
 </div>
+
 <div class="grid-produtos" id="listaProdutos">
+
 {% for p in produtos %}
-<div class="card-produto"
-data-id="{{p[0]}}"
-data-nome="{{p[1]}}"
->
 
-<h3>
+<div
+    class="card-produto"
+    data-id="{{p[0]}}"
+    data-nome="{{p[1]}}">
 
-{{p[1]}}
+<h3>{{p[1]}}</h3>
 
-</h3>
-
-<p>
-
-{{p[3]}}
-
-</p>
+<p>{{p[3]}}</p>
 
 <input
-type="number"
-value="1"
-min="1"
-id="qtd-{{p[0]}}"
-
+    type="number"
+    value="1"
+    min="1"
+    id="qtd-{{p[0]}}"
 >
-<button
 
-onclick="adicionarProduto(this)">
-
+<button onclick="adicionarProduto(this)">
 ➕
-
 </button>
 
 </div>
@@ -163,12 +152,11 @@ onclick="adicionarProduto(this)">
 {% endfor %}
 
 </div>
-</div>
+
 </div>
 
-<script src="{{url_for(
-'static',
-filename='js/requisicoes.js'
-)}}"></script>
+</div>
+
+<script src="{{ url_for('static', filename='js/requisicoes.js') }}"></script>
 
 {% endblock %}
