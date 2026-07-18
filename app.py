@@ -3809,7 +3809,7 @@ def requisicoes():
 from flask import request, jsonify, session
 from datetime import datetime
 import uuid
-from whatsapp_service.servico import enviar_notificacao
+from notificacoes import enviar_whatsapp
 
 @app.route("/api/enviar_requisicao", methods=["POST"])
 @login_required
@@ -4243,7 +4243,7 @@ def enviar_requisicao():
 
             try:
 
-                resposta = enviar_notificacao(
+                resposta = enviar_whatsapp(
 
                     empresa_id,
 
