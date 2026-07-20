@@ -1,9 +1,5 @@
 import requests
-
-
 URL_WHATSAPP = "https://whatsapp-service-yjxd.onrender.com/enviar"
-
-
 def enviar_whatsapp(
         empresa_id,
         telefone,
@@ -26,7 +22,7 @@ def enviar_whatsapp(
 
             },
 
-            timeout=15
+            timeout=30
 
         )
 

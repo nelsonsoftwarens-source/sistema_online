@@ -54,7 +54,9 @@ const {
 
     obterSessao,
 
-    enviarMensagem
+    enviarMensagem,
+
+    restaurarSessoes
 
 } = require("./whatsapp");
 
@@ -414,6 +416,7 @@ async(req,res)=>{
 
 });
 
+restaurarSessoes();
 
 // =====================================
 

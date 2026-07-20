@@ -345,12 +345,62 @@ async function enviarMensagem(
 
 }
 
+async function restaurarSessoes(){
+
+    const pasta =
+    path.join(
+        __dirname,
+        "sessions"
+    );
+
+
+    if(!require("fs").existsSync(pasta)){
+        return;
+    }
+
+
+    const empresas =
+    require("fs")
+    .readdirSync(pasta);
+
+
+    for(const empresa of empresas){
+
+        console.log(
+            "Restaurando sessão:",
+            empresa
+        );
+
+
+        try{
+
+            await conectarEmpresa(
+                empresa
+            );
+
+
+        }catch(e){
+
+            console.log(
+                "Erro restaurando:",
+                empresa,
+                e.message
+            );
+
+        }
+
+    }
+
+}
+
 module.exports = {
 
     conectarEmpresa,
 
     obterSessao,
 
-    enviarMensagem
+    enviarMensagem,
+
+    restaurarSessoes
 
 };
