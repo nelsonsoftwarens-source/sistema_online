@@ -4,12 +4,10 @@ const fs = require("fs");
 const path = require("path");
 
 const app = express();
-
 app.use(cors());
 app.use(express.json());
 
-const PORT = 3001;
-
+const PORT = process.env.PORT || 3001;
 // =====================================
 // Estruturas em memória
 // =====================================
@@ -60,50 +58,6 @@ const {
 
 } = require("./whatsapp");
 
-app.get("/teste_whatsapp",
-
-async(req,res)=>{
-
-
-    try{
-
-
-        await enviarMensagem(
-
-            1,
-
-            "258847009499",
-
-            "Teste NV-Sistema WhatsApp funcionando"
-
-        );
-
-
-        res.json({
-
-            sucesso:true
-
-        });
-
-
-    }
-
-    catch(e){
-
-
-        res.json({
-
-            sucesso:false,
-
-            erro:e.message
-
-        });
-
-
-    }
-
-
-});
 
 const SESSION_PATH = path.join(
     __dirname,
@@ -350,69 +304,6 @@ app.post(
 
 
 // =====================================
-// ENVIAR
-// =====================================
-
-app.post(
-
-"/enviar",
-
-(req,res)=>{
-
-    const{
-
-        empresa_id,
-
-        telefone,
-
-        mensagem
-
-    }=req.body;
-
-    criarEmpresa(
-        empresa_id
-    );
-
-    if(
-
-        !empresas[empresa_id]
-        .conectado
-
-    ){
-
-        return res.json({
-
-            sucesso:false,
-
-            mensagem:
-
-            "WhatsApp não conectado"
-
-        });
-
-    }
-
-    log(
-
-        "Mensagem enviada para "
-        +telefone
-
-    );
-
-    empresas[
-        empresa_id
-    ].mensagens++;
-
-    res.json({
-
-        sucesso:true
-
-    });
-
-});
-
-
-// =====================================
 // ROOT
 // =====================================
 
@@ -444,30 +335,22 @@ app.get(
 // ENVIAR WHATSAPP
 // =====================================
 
-
 app.post(
-
 "/enviar",
-
 async(req,res)=>{
 
-
     try{
-
 
         const empresa =
         String(
             req.body.empresa_id
         );
 
-
         const telefone =
         req.body.telefone;
 
-
         const mensagem =
         req.body.mensagem;
-
 
 
         if(
@@ -488,7 +371,6 @@ async(req,res)=>{
         }
 
 
-
         await enviarMensagem(
 
             empresa,
@@ -498,7 +380,6 @@ async(req,res)=>{
             mensagem
 
         );
-
 
 
         res.json({
@@ -511,11 +392,8 @@ async(req,res)=>{
         });
 
 
-
     }
-
     catch(e){
-
 
         console.log(
             "ERRO WHATSAPP:",
@@ -532,25 +410,10 @@ async(req,res)=>{
 
         });
 
-
     }
 
-
 });
 
-app.get(
-"/",
-(req,res)=>{
-
-    res.json({
-
-        sistema:"NV WhatsApp Service",
-
-        status:"ONLINE"
-
-    });
-
-});
 
 // =====================================
 

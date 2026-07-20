@@ -1,7 +1,7 @@
 import requests
 
 
-URL_WHATSAPP = "https://sistema-online-icnn.onrender.com/enviar"
+URL_WHATSAPP = "https://whatsapp-service-yjxd.onrender.com/enviar"
 
 
 def enviar_whatsapp(
@@ -18,7 +18,7 @@ def enviar_whatsapp(
 
             json={
 
-                "empresa_id": empresa_id,
+                "empresa_id": str(empresa_id),
 
                 "telefone": telefone,
 
@@ -30,11 +30,22 @@ def enviar_whatsapp(
 
         )
 
+
+        print(
+            "RESPOSTA NODE WHATSAPP:",
+            resposta.text
+        )
+
+
         return resposta.json()
+
 
     except Exception as e:
 
-        print("ERRO WHATSAPP:", e)
+        print(
+            "ERRO WHATSAPP:",
+            e
+        )
 
         return {
 
