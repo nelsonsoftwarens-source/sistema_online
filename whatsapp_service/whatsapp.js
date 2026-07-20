@@ -189,7 +189,7 @@ async function conectarEmpresa(empresa) {
                 qr
 
             } = update;
-
+            console.log("UPDATE:", connection, qr ? "TEM QR" : "SEM QR");
             if(qr){
 
                 sessoes[empresa].qr =
@@ -233,23 +233,20 @@ async function conectarEmpresa(empresa) {
 
             }
 
-            if(connection=="close"){
+            if (connection === "close") {
 
+                console.log("================================");
+                console.log("CONEXÃO FECHADA");
+                console.log(lastDisconnect);
+                console.log("================================");
 
-                sessoes[empresa].conectado=false;
-
-
+                sessoes[empresa].conectado = false;
 
                 await salvarWhatsApp(
-
                     empresa,
-
                     "",
-
                     "DESCONECTADO"
-
                 );
-
 
             }
 
