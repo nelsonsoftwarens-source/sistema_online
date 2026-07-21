@@ -237,7 +237,7 @@ async function conectarEmpresa(empresa) {
 
                 console.log("================================");
                 console.log("CONEXÃO FECHADA");
-                console.log(lastDisconnect);
+                console.dir(lastDisconnect, { depth: null });
                 console.log("================================");
 
                 sessoes[empresa].conectado = false;
@@ -264,83 +264,6 @@ function obterSessao(empresa){
 
 }
 
-
-
-// =====================================
-// ENVIAR MENSAGEM
-// =====================================
-
-async function enviarMensagem(
-    empresa,
-    telefone,
-    mensagem
-){
-
-    const sessao =
-    sessoes[empresa];
-
-
-    if(!sessao){
-
-        throw new Error(
-            "Empresa sem sessão WhatsApp"
-        );
-
-    }
-
-
-    if(!sessao.conectado){
-
-        throw new Error(
-            "WhatsApp não conectado"
-        );
-
-    }
-
-
-    let numero =
-    telefone.replace(
-        /\D/g,
-        ""
-    );
-
-
-    // Mozambique
-    // adiciona 258 se necessário
-
-    if(numero.length == 9){
-
-        numero =
-        "258" + numero;
-
-    }
-
-
-
-    const jid =
-    numero + "@s.whatsapp.net";
-
-
-    await sessao.socket.sendMessage(
-
-        jid,
-
-        {
-            text: mensagem
-        }
-
-    );
-
-
-    console.log(
-        "Mensagem enviada:",
-        numero
-    );
-
-
-    return true;
-
-}
 
 async function restaurarSessoes(){
 
