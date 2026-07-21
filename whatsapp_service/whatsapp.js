@@ -29,17 +29,14 @@ async function enviarMensagem(
 
 ){
 
-
     try{
 
 
-        const sock =
+        const sessao =
         sessoes[empresa];
 
 
-
-        if(!sock){
-
+        if(!sessao){
 
             throw new Error(
 
@@ -50,15 +47,26 @@ async function enviarMensagem(
         }
 
 
+        if(!sessao.conectado){
 
-        let numero = 
-        telefone
-        .replace(/\D/g,'');
+            throw new Error(
 
+                "WhatsApp não conectado."
+
+            );
+
+        }
+
+
+        const sock =
+        sessao.socket;
+
+
+        let numero =
+        telefone.replace(/\D/g,'');
 
 
         if(numero.length < 9){
-
 
             throw new Error(
 
@@ -69,10 +77,8 @@ async function enviarMensagem(
         }
 
 
-
         const jid =
         numero + "@s.whatsapp.net";
-
 
 
         await sock.sendMessage(
@@ -80,13 +86,10 @@ async function enviarMensagem(
             jid,
 
             {
-
                 text: mensagem
-
             }
 
         );
-
 
 
         console.log(
@@ -100,14 +103,12 @@ async function enviarMensagem(
         );
 
 
-
         return true;
 
 
     }
 
     catch(e){
-
 
         console.log(
 
@@ -117,12 +118,9 @@ async function enviarMensagem(
 
         );
 
-
         throw e;
 
-
     }
-
 
 }
 
