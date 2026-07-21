@@ -127,6 +127,22 @@ async function enviarMensagem(
 
 async function conectarEmpresa(empresa) {
 
+    // Se já existe uma sessão ligada, não cria outra
+    if (
+        sessoes[empresa] &&
+        sessoes[empresa].socket &&
+        sessoes[empresa].conectado
+    ) {
+
+        console.log(
+            "Sessão já conectada:",
+            empresa
+        );
+
+        return sessoes[empresa].socket;
+
+    }
+
     const pastaSessao = path.join(
         __dirname,
         "sessions",
@@ -166,7 +182,9 @@ async function conectarEmpresa(empresa) {
 
         telefone: "",
 
-        qr: ""
+        qr: "",
+
+        reconectando: false
 
     };
 
@@ -188,7 +206,13 @@ async function conectarEmpresa(empresa) {
                 qr
 
             } = update;
-            console.log("UPDATE:", connection, qr ? "TEM QR" : "SEM QR");
+
+            console.log(
+                "UPDATE:",
+                connection,
+                qr ? "TEM QR" : "SEM QR"
+            );
+
             if(qr){
 
                 sessoes[empresa].qr =
@@ -201,16 +225,14 @@ async function conectarEmpresa(empresa) {
 
             }
 
-            if(connection=="open"){
+            if(connection === "open"){
 
-
-                sessoes[empresa].conectado=true;
-
+                sessoes[empresa].conectado = true;
 
                 sessoes[empresa].telefone =
-                sock.user.id;
+                    sock.user.id;
 
-
+                sessoes[empresa].reconectando = false;
 
                 await salvarWhatsApp(
 
@@ -223,61 +245,75 @@ async function conectarEmpresa(empresa) {
                 );
 
                 console.log(
-
                     empresa,
-
                     "CONECTADO"
-
                 );
 
             }
 
-            if (connection === "close") {
+            if(connection === "close"){
 
                 const motivo =
-                lastDisconnect?.error?.output?.statusCode;
+                    lastDisconnect?.error?.output?.statusCode;
 
                 console.log(
                     "CONEXÃO FECHADA:",
                     motivo
                 );
 
+                sessoes[empresa].conectado = false;
 
-                sessoes[empresa].conectado=false;
+                await salvarWhatsApp(
+                    empresa,
+                    "",
+                    "DESCONECTADO"
+                );
 
+                if(
+                    motivo !== DisconnectReason.loggedOut &&
+                    !sessoes[empresa].reconectando
+                ){
 
-                if(motivo !== 401){
+                    sessoes[empresa].reconectando = true;
+
                     console.log(
                         "Tentando reconectar..."
                     );
 
+                    setTimeout(async()=>{
 
-                    if(!sessoes[empresa].reconectando){
+                        try{
 
-                        sessoes[empresa].reconectando = true;
+                            if(sessoes[empresa]?.socket){
 
+                                try{
 
-                        setTimeout(async()=>{
+                                    sock.end();
 
-                            sessoes[empresa].reconectando = false;
+                                }catch{}
 
-                            await conectarEmpresa(empresa);
+                            }
 
+                            delete sessoes[empresa];
 
-                        },5000);
+                            await conectarEmpresa(
+                                empresa
+                            );
 
-                    }
+                        }
+
+                        catch(e){
+
+                            console.log(
+                                "Erro reconectando:",
+                                e.message
+                            );
+
+                        }
+
+                    },5000);
 
                 }
-
-                await salvarWhatsApp(
-                    empresa
-                    
-                    
-                    ,
-                    "",
-                    "DESCONECTADO"
-                );
 
             }
 
