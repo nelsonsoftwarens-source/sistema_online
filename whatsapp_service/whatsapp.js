@@ -21,7 +21,7 @@ const sessoes = {};
 
 async function enviarMensagem(
 
-    empresa_id,
+    empresa,
 
     telefone,
 
@@ -34,7 +34,7 @@ async function enviarMensagem(
 
 
         const sock =
-        sessoes[empresa_id];
+        sessoes[empresa];
 
 
 
@@ -93,7 +93,7 @@ async function enviarMensagem(
 
             "Mensagem enviada:",
 
-            empresa_id,
+            empresa,
 
             telefone
 
@@ -244,7 +244,7 @@ async function conectarEmpresa(empresa) {
                 );
 
 
-                sessoes[empresa_id].conectado=false;
+                sessoes[empresa].conectado=false;
 
 
                 if(motivo !== 401){
@@ -255,7 +255,7 @@ async function conectarEmpresa(empresa) {
 
                     setTimeout(()=>{
 
-                        conectarEmpresa(empresa_id);
+                        conectarEmpresa(empresa);
 
                     },5000);
 
@@ -263,7 +263,10 @@ async function conectarEmpresa(empresa) {
 
 
                 await salvarWhatsApp(
-                    empresa_id,
+                    empresa
+                    
+                    
+                    ,
                     "",
                     "DESCONECTADO"
                 );
@@ -278,9 +281,9 @@ async function conectarEmpresa(empresa) {
 
 }
 
-function obterSessao(empresa_id){
+function obterSessao(empresa){
 
-    return sessoes[empresa_id];
+    return sessoes[empresa];
 
 }
 
