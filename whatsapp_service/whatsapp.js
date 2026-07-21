@@ -94,7 +94,7 @@ async function enviarMensagem(
         console.log("JID:", jid);
 
 
-        await sock.sendMessage(
+        const resposta = await sock.sendMessage(
 
             jid,
 
@@ -103,6 +103,9 @@ async function enviarMensagem(
             }
 
         );
+
+        console.log("RESPOSTA SENDMESSAGE:");
+        console.dir(resposta, { depth: null });
 
 
         console.log("Mensagem enviada com sucesso.");
