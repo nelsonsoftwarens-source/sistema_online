@@ -235,15 +235,35 @@ async function conectarEmpresa(empresa) {
 
             if (connection === "close") {
 
-                console.log("================================");
-                console.log("CONEXÃO FECHADA");
-                console.dir(lastDisconnect, { depth: null });
-                console.log("================================");
+                const motivo =
+                lastDisconnect?.error?.output?.statusCode;
 
-                sessoes[empresa].conectado = false;
+                console.log(
+                    "CONEXÃO FECHADA:",
+                    motivo
+                );
+
+
+                sessoes[empresa_id].conectado=false;
+
+
+                if(motivo !== 401){
+
+                    console.log(
+                        "Tentando reconectar..."
+                    );
+
+                    setTimeout(()=>{
+
+                        conectarEmpresa(empresa_id);
+
+                    },5000);
+
+                }
+
 
                 await salvarWhatsApp(
-                    empresa,
+                    empresa_id,
                     "",
                     "DESCONECTADO"
                 );
@@ -258,9 +278,9 @@ async function conectarEmpresa(empresa) {
 
 }
 
-function obterSessao(empresa){
+function obterSessao(empresa_id){
 
-    return sessoes[empresa];
+    return sessoes[empresa_id];
 
 }
 
