@@ -31,54 +31,67 @@ async function enviarMensagem(
 
     try{
 
-
         const sessao =
         sessoes[empresa];
-
 
         if(!sessao){
 
             throw new Error(
-
                 "WhatsApp não conectado para esta empresa."
-
             );
 
         }
-
 
         if(!sessao.conectado){
 
             throw new Error(
-
                 "WhatsApp não conectado."
-
             );
 
         }
 
-
         const sock =
         sessao.socket;
+
+
+        console.log("Telefone recebido:", telefone);
 
 
         let numero =
         telefone.replace(/\D/g,'');
 
 
-        if(numero.length < 9){
+        if(numero.length == 9){
+
+            numero = "258" + numero;
+
+        }
+
+
+        console.log("Número final:", numero);
+
+
+        const existe =
+        await sock.onWhatsApp(numero);
+
+
+        console.log("onWhatsApp:", existe);
+
+
+        if(!existe || existe.length == 0){
 
             throw new Error(
-
-                "Número de telefone inválido."
-
+                "Número não existe no WhatsApp."
             );
 
         }
 
 
         const jid =
-        numero + "@s.whatsapp.net";
+        existe[0].jid;
+
+
+        console.log("JID:", jid);
 
 
         await sock.sendMessage(
@@ -92,30 +105,18 @@ async function enviarMensagem(
         );
 
 
-        console.log(
-
-            "Mensagem enviada:",
-
-            empresa,
-
-            telefone
-
-        );
+        console.log("Mensagem enviada com sucesso.");
 
 
         return true;
-
 
     }
 
     catch(e){
 
         console.log(
-
             "ERRO ENVIO WHATSAPP:",
-
-            e.message
-
+            e
         );
 
         throw e;
