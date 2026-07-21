@@ -246,19 +246,28 @@ async function conectarEmpresa(empresa) {
 
 
                 if(motivo !== 401){
-
                     console.log(
                         "Tentando reconectar..."
                     );
 
-                    setTimeout(()=>{
 
-                        conectarEmpresa(empresa);
+                    if(!sessoes[empresa].reconectando){
 
-                    },5000);
+                        sessoes[empresa].reconectando = true;
+
+
+                        setTimeout(async()=>{
+
+                            sessoes[empresa].reconectando = false;
+
+                            await conectarEmpresa(empresa);
+
+
+                        },5000);
+
+                    }
 
                 }
-
 
                 await salvarWhatsApp(
                     empresa
